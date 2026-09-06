@@ -20,6 +20,6 @@
   "runtimeManifest": {
     "path": "./runtime-manifest.json",
     "schema": "https://raw.githubusercontent.com/cordisx/cordisx-protocol/main/schemas/plugin-manifest.v8.schema.json",
-    "digest": "sha256:855fde2c4267a477140677f4a35f69b792f9ed2f0eb62e6bdc58120dd75f4cbe"
+    "digest": "sha256:8e5285fb4ec1908c85e67c43006f89a4d70343c751c95a753db10b108da5c62a"
   }
 }

@@ -27,3 +27,11 @@ test("owns maintained Channel styles as a real stylesheet", async () => {
   assert.match(styles, /@media\s*\(width\s*<=\s*700px\)/);
   assert.doesNotMatch(styles, /<style>|const STYLES/);
 });
+
+test("scopes binding mutation to the manifest-authorized simulator tenant", async () => {
+  const source = await import("../dist/channel.js");
+  const capability = source.manifest.capabilities.find(item => item.name === "channel.bindings.write");
+  assert.deepEqual(capability.scope, {
+    channelTenants: [{ adapterId: "simulator", accountId: "local", tenantId: "test" }],
+  });
+});

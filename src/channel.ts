@@ -55,7 +55,11 @@ export const manifest = {
       },
     },
     { name: "channel.bindings.read", required: false, scope: {} },
-    { name: "channel.bindings.write", required: false, scope: {} },
+    {
+      name: "channel.bindings.write",
+      required: false,
+      scope: { channelTenants: [{ adapterId: "simulator", accountId: "local", tenantId: "test" }] },
+    },
     {
       name: "channel.attachments.read",
       required: false,
