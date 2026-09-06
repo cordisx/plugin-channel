@@ -1,55 +1,36 @@
-# Channels
+# CordisX Channel
 
-Channels is the CordisX product surface for launcher-owned messaging connections. It contributes a structured Manager navigation record plus a same-owner standard page route, and declares one Node-side `channel-adapter` service using the versioned `channel-service-config/v1` Host schema.
+This public repository is the owner of the CordisX Channel management plugin.
+It preserves the filtered Git authorship history of the former built-in Host
+directory through Host commit
+`1cbe9d0ff1a803b1486bb2ddcbedc98a187d4f11`.
 
-## Current status
+## Current checkpoint
 
-- **Implemented:** immutable packaged service artifacts are validated, bundled, staged, integrity-checked, authority-projected, and loaded into a generation-bound Node Cordis context.
-- **Verified:** the local simulator covers activation/disposal; the official Feishu/Lark WebSocket adapter and the shared Host service-config API are covered by automated tests for `service-restart` CAS, opaque-handle preservation, redaction, and last-good publication.
-- **Implemented and verified:** the bounded Host body renderer provides a fixed searchable Channel card list, a Host-owned candidate-only create flow, and Configuration / Logs / Connections & sessions details through `manager.content`. The Host renders navigation, forms, theme, accessibility, and cleanup; it never projects `secretRef` or credential material.
-- **Experimental:** the renderer receives only the launch-time Channel projection. It is not a continuous transport or live connection feed.
-- **Not yet verified:** a real Feishu/Lark account connection and message smoke. Automated adapter verification is not evidence of a user-account session.
-- **Unavailable:** credential creation broker and WeCom adapter support.
-- **Planned:** real-account smoke evidence and lifecycle-wired live renderer projections.
+The repository is initialized but does not yet publish an executable plugin.
+The former built-in source depended on private Host renderer, service-config,
+credential, and Channel Manager modules. Those files remain in Git history for
+provenance and have been removed from the public source tree.
 
-The renderer module has no user configuration fields. Only account connection
-configuration belongs to the launcher service declaration. The closed manifest
-`restart` value maps to the Host's precise `service-restart` plane and exposes a
-Host-owned Schemastery descriptor; task mapping, models, workspaces,
-notifications, retry policy, and task dispatch belong to independent consumer
-plugins. A service with no configuration must declare `configuration.kind:
-"none"`; CordisX does not create placeholder fields.
+Executable migration waits for formal public dependencies:
 
-Credentials are opaque Host handles. They must not appear in plugin configuration, renderer state, logs, Manager snapshots, or this README's examples.
+- Protocol TypeScript declarations for the existing Channel Manager v2
+  contracts and runtime snapshot v3.
+- A source-bound Host renderer facade for snapshots, subscriptions, exact
+  fenced operations, safe log pages, and Host-owned export handoff.
 
-The Manager never claims a connection from an application identifier alone.
-Credentials remain Host-held; a real account or message result is shown only
-after a separately verified connection path, never inferred from configuration.
+See [MIGRATION.md](MIGRATION.md) for the boundary and delivery order.
 
-## Plugin-to-plugin messaging facade
+## Ownership
 
-Launcher-side Cordis plugins can request the high-level `ctx.channel` service. It exposes:
+This plugin will own localized Channel routes, page body presentation, its view
+model, one page factory and lifecycle, and `src/channel.css`.
 
-- `ctx.channel.connections.list()` for permission-brokered safe connection status;
-- `ctx.channel.messages.subscribe()` for source-bound inbound user messages;
-- `ctx.channel.messages.send()` for audited outbound notifications with a delivery handle; and
-- `ctx.channel.adapters.register()` for adapter packages running inside the launcher service host.
+CordisX Host continues to own Manager chrome and history, credential capture,
+download handling, semantic UI primitives, accessibility policy, native
+integration, and the Channel runtime/provider adapter. The plugin will not
+import private Host files or carry credentials, raw account identifiers,
+filesystem paths, DOM handles, or transport callbacks.
 
-The facade preserves package source, plugin id, and generation identity. Consumer plugins never receive raw transports, credentials, queues, stores, or adapter connection objects. A remote message remains a sourced `role: "user"` input and cannot become a system or developer prompt.
-
-The product bundle declares every operational capability as optional so the read-only Settings diagnostics remain available when a service permission is denied. Each service operation still fails closed at the broker. A future real adapter package may make the capabilities needed for its selected transport and configured route required within its explicit account, tenant, conversation, provider, workspace, or session scopes.
-
-## Identity and reliability
-
-Accounts use `adapterId + accountId + tenantId`. Threads additionally use `conversationId + threadId`, and task bindings use the composite `providerId + remoteSessionId`; display names and coincident remote ids never collapse these identities.
-
-Delivery is at least once with durable inbox/outbox records, event-id idempotency, retry/backoff, dead letters, cursor checkpoints, restart recovery, generation fencing, and last-good revisions. CordisX does not claim exactly-once delivery.
-
-## Real platform boundary
-
-The built-in service supports the local simulator and the official Feishu/Lark
-WebSocket adapter. The adapter uses official platform APIs and Host-held
-credentials, but a real account/message smoke has not yet been verified.
-WeCom remains unavailable. Personal WeChat client reverse engineering,
-unofficial hooks, fabricated subscriptions, and renderer-owned web servers are
-out of scope.
+The initial package is private at version `0.0.0` to prevent accidental
+publication before the public seam and executable package graph are complete.

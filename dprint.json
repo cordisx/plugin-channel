@@ -1,0 +1,17 @@
+{
+  "$schema": "https://dprint.dev/schemas/v0.json",
+  "includes": ["**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,json,jsonc,md,css}"],
+  "excludes": ["**/node_modules/**", "**/dist/**", "package-lock.json"],
+  "plugins": [
+    "npm:@dprint/typescript@0.96.1",
+    "npm:@dprint/json@0.23.0",
+    "npm:@dprint/markdown@0.23.3",
+    "https://plugins.dprint.dev/g-plane/malva-v0.14.3.wasm"
+  ],
+  "typescript": {
+    "jsx.quoteStyle": "preferDouble",
+    "module.sortImportDeclarations": "maintain",
+    "module.sortExportDeclarations": "maintain"
+  },
+  "malva": { "quotes": "preferDouble" }
+}

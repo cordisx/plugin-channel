@@ -1,0 +1,33 @@
+{
+  "name": "@cordisx/channel",
+  "version": "0.0.0",
+  "private": true,
+  "description": "CordisX channel management plugin",
+  "license": "MIT",
+  "type": "module",
+  "main": "./dist/status.js",
+  "types": "./dist/status.d.ts",
+  "files": ["dist", "README.md", "README.zh-Hans.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "lint:source": "eslint src test",
+    "lint:styles": "stylelint \"src/**/*.css\"",
+    "lint": "npm run lint:source && npm run lint:styles",
+    "format": "dprint fmt",
+    "format:check": "dprint check",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm test"
+  },
+  "engines": { "node": ">=22.19" },
+  "devDependencies": {
+    "@cordisx/eslint-config": "github:cordisx/cordisxmono#c63c2e8c2ba7e11502934a52ad2ce3734e804cdc",
+    "@projectwallace/stylelint-plugin": "0.7.0",
+    "@typescript-eslint/parser": "8.69.0",
+    "dprint": "0.57.1",
+    "eslint": "9.39.4",
+    "stylelint": "17.15.0",
+    "stylelint-config-standard": "40.0.0",
+    "typescript": "5.9.2"
+  }
+}
