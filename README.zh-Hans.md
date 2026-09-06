@@ -6,14 +6,13 @@ Host 提交 `1cbe9d0ff1a803b1486bb2ddcbedc98a187d4f11` 的筛选 Git 作者历�
 
 ## 当前检查点
 
-仓库已经初始化，但尚未发布可执行插件。原内置实现依赖 Host 私有 renderer、
+仓库现在已经构建出可执行插件候选。原内置实现依赖 Host 私有 renderer、
 service-config、凭据与 Channel Manager 模块。这些文件只保留在 Git 历史中，已经
 从公开源码树删除。
 
-功能迁移等待两个正式公共依赖：
+候选已消费正式 Protocol Channel Manager v2 类型
+`9654023d1b1077d6fd0d43a2d294459bab63216b`。激活仍等待一个正式 Host 依赖：
 
-- Protocol 为现有 Channel Manager v2 合约与 runtime snapshot v3 提供
-  TypeScript 声明；
 - Host 提供 source-bound renderer facade，只公开 snapshot、订阅、精确 fenced
   操作、安全日志分页和 Host 所有的导出交接。
 

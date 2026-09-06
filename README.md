@@ -9,15 +9,15 @@ history.
 
 ## Current checkpoint
 
-The repository is initialized but does not yet publish an executable plugin.
+The repository now builds an executable plugin candidate.
 The former built-in source depended on private Host renderer, service-config,
 credential, and Channel Manager modules. Those files remain in Git history for
 provenance and have been removed from the public source tree.
 
-Executable migration waits for formal public dependencies:
+The candidate consumes the formal Protocol Channel Manager v2 types at
+`9654023d1b1077d6fd0d43a2d294459bab63216b`. Activation still waits for one
+formal Host dependency:
 
-- Protocol TypeScript declarations for the existing Channel Manager v2
-  contracts and runtime snapshot v3.
 - A source-bound Host renderer facade for snapshots, subscriptions, exact
   fenced operations, safe log pages, and Host-owned export handoff.
 

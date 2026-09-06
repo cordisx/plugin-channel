@@ -50,15 +50,6 @@
   border-inline-start: 1px solid var(--cx-border);
 }
 
-.cxc-channel-toolbar .cxr-ui-button {
-  min-width: 38px;
-  min-height: 38px;
-  padding: 0 11px;
-  border: 0;
-  border-inline-start: 1px solid var(--cx-border);
-  border-radius: 0;
-}
-
 .cxc-channel-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
@@ -209,41 +200,6 @@
   align-items: start;
 }
 
-.cxc-channel-platform-icon {
-  display: grid;
-  width: 72px;
-  height: 72px;
-  place-items: center;
-}
-
-.cxc-channel-app-icon {
-  position: relative;
-  display: grid;
-  width: 72px;
-  height: 72px;
-  place-items: center;
-}
-
-.cxc-channel-app-icon img {
-  position: absolute;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  border-radius: 17px;
-}
-
-.cxc-channel-app-icon img[data-theme="dark"] {
-  display: none;
-}
-
-[data-cordisx-app-theme="dark"] .cxc-channel-app-icon img[data-theme="light"] {
-  display: none;
-}
-
-[data-cordisx-app-theme="dark"] .cxc-channel-app-icon img[data-theme="dark"] {
-  display: block;
-}
-
 .cxc-channel-create-copy {
   display: grid;
   gap: 12px;
@@ -270,11 +226,6 @@
   color: var(--cx-text);
   font: inherit;
   outline: 0;
-}
-
-.cxc-channel-platform-select .cxr-ui-select-trigger {
-  min-height: 38px;
-  border-radius: 8px 0 0 8px;
 }
 
 .cxc-channel-create-primary input {
