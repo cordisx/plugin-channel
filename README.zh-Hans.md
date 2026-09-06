@@ -11,8 +11,8 @@ service-config、凭据与 Channel Manager 模块。这些文件只保留在 Git
 从公开源码树删除。
 
 候选已消费正式 Protocol Channel Manager v2 类型
-`9654023d1b1077d6fd0d43a2d294459bab63216b`，以及正式 Host provider
-`4a33f62bb087ce410ebb1e3f2341f08c3968fce5`。
+`3f0dbcd8b04ae83c920d2d913ac2c313af5f83f1`，以及正式 Host provider
+`dfb071e02eca0ef52f84d67b2393c25aced7d3f0`。
 
 具体边界与交付顺序见 [MIGRATION.md](MIGRATION.md)。
 

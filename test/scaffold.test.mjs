@@ -5,8 +5,8 @@ import { test } from "node:test";
 test("publishes exact formal Protocol and Host baselines", async () => {
   const status = await import("../dist/status.js");
   assert.equal(status.CHANNEL_PLUGIN_STATUS, "package-verification");
-  assert.equal(status.REQUIRED_BASELINES.host, "4a33f62bb087ce410ebb1e3f2341f08c3968fce5");
-  assert.equal(status.REQUIRED_BASELINES.protocol, "9654023d1b1077d6fd0d43a2d294459bab63216b");
+  assert.equal(status.REQUIRED_BASELINES.host, "dfb071e02eca0ef52f84d67b2393c25aced7d3f0");
+  assert.equal(status.REQUIRED_BASELINES.protocol, "3f0dbcd8b04ae83c920d2d913ac2c313af5f83f1");
 });
 
 test("keeps Host-private imports out of standalone source", async () => {

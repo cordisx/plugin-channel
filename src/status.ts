@@ -2,6 +2,6 @@
 export const CHANNEL_PLUGIN_STATUS = "package-verification" as const;
 
 export const REQUIRED_BASELINES = Object.freeze({
-  host: "4a33f62bb087ce410ebb1e3f2341f08c3968fce5",
-  protocol: "9654023d1b1077d6fd0d43a2d294459bab63216b",
+  host: "dfb071e02eca0ef52f84d67b2393c25aced7d3f0",
+  protocol: "3f0dbcd8b04ae83c920d2d913ac2c313af5f83f1",
 });
