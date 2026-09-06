@@ -1,6 +1,8 @@
 export const name = "channel-runtime";
 export const inject = ["channel"];
 
+const SIMULATOR_REF = Object.freeze({ adapterId: "simulator", accountId: "local", tenantId: "test" });
+
 function validateConfig(value) {
   if (
     value === null || typeof value !== "object" || Array.isArray(value)
@@ -12,14 +14,14 @@ function validateConfig(value) {
   return value;
 }
 
-function simulatorDefinition(connection) {
+function simulatorDefinition(connection, configurationRevision) {
   const sent = new Map();
   return {
     descriptor: {
       ref: connection.ref,
       kind: "simulator",
       implementationStatus: "verified",
-      configurationRevision: 1,
+      configurationRevision,
       secretState: "unavailable",
     },
     start: async () => ({
@@ -42,10 +44,19 @@ function simulatorDefinition(connection) {
  */
 export async function apply(ctx, input) {
   const config = validateConfig(input);
+  const configurationRevision = ctx.channel.configuration.revision;
+  if (!Number.isInteger(configurationRevision) || configurationRevision < 1) {
+    throw new TypeError("Channel service configuration revision is invalid");
+  }
   for (const connection of config.connections) {
     if (!connection.enabled) continue;
-    if (connection.adapterKind === "simulator" && connection.transport?.mode === "simulator") {
-      await ctx.channel.adapters.register(simulatorDefinition(connection));
+    if (
+      connection.adapterKind === "simulator" && connection.transport?.mode === "simulator"
+      && connection.ref?.adapterId === SIMULATOR_REF.adapterId
+      && connection.ref?.accountId === SIMULATOR_REF.accountId
+      && connection.ref?.tenantId === SIMULATOR_REF.tenantId
+    ) {
+      await ctx.channel.adapters.register(simulatorDefinition(connection, configurationRevision));
     }
   }
 }

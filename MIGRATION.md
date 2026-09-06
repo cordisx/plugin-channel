@@ -17,9 +17,10 @@ Executable migration depended on two public seams:
    commit `4a33f62bb087ce410ebb1e3f2341f08c3968fce5`.
 
 The plugin candidate now owns its localized routes, page bodies, model,
-lifecycle, and `src/channel.css`. The Host continues to own Manager chrome, routing
-history, credential capture, downloads, semantic controls, native integration,
-and the Channel runtime/provider adapter.
+lifecycle, `src/channel.css`, and Simulator adapter definition. The Host
+continues to own Manager chrome, routing history, credential capture, downloads,
+semantic controls, native integration, the single Channel runtime,
+credential-bearing adapter transport, and adapter publication authority.
 
 No generic service-config bridge, raw account identifier, credential value or
 reference, filesystem path, DOM handle, transport callback, or private Host

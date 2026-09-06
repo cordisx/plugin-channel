@@ -22,14 +22,17 @@ See [MIGRATION.md](MIGRATION.md) for the boundary and delivery order.
 
 ## Ownership
 
-This plugin will own localized Channel routes, page body presentation, its view
-model, one page factory and lifecycle, and `src/channel.css`.
+This plugin owns localized Channel routes, page body presentation, its view
+model, one page factory and lifecycle, `src/channel.css`, and the Simulator
+adapter definition loaded through the public `ctx.channel` service.
 
 CordisX Host continues to own Manager chrome and history, credential capture,
 download handling, semantic UI primitives, accessibility policy, native
-integration, and the Channel runtime/provider adapter. The plugin will not
+integration, the single Channel runtime, credential-bearing adapter transport,
+and adapter publication authority. The plugin will not
 import private Host files or carry credentials, raw account identifiers,
 filesystem paths, DOM handles, or transport callbacks.
 
-The initial package is private at version `0.0.0` to prevent accidental
-publication before the public seam and executable package graph are complete.
+The package remains private at version `0.1.0` to prevent accidental
+publication before the Host-stamped service configuration revision and final
+consumer removal are complete.

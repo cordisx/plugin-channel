@@ -13,6 +13,7 @@ test("registers only enabled simulator definitions through the public Channel se
   const definitions = [];
   const ctx = {
     channel: {
+      configuration: { revision: 7 },
       adapters: {
         register: async definition => {
           definitions.push(definition);
@@ -32,6 +33,7 @@ test("registers only enabled simulator definitions through the public Channel se
   });
   assert.equal(definitions.length, 1);
   assert.deepEqual(definitions[0].descriptor.ref, simulator.ref);
+  assert.equal(definitions[0].descriptor.configurationRevision, 7);
   assert.equal(definitions[0].descriptor.secretState, "unavailable");
 
   const connection = await definitions[0].start({});
@@ -55,9 +57,33 @@ test("registers only enabled simulator definitions through the public Channel se
   await connection.stop("disposed");
 });
 
-test("fails closed on a malformed Host configuration", async () => {
-  await assert.rejects(() => apply({ channel: { adapters: { register: async () => ({}) } } }, {}), {
+test("ignores simulator targets outside the manifest scope", async () => {
+  const definitions = [];
+  await apply({
+    channel: {
+      configuration: { revision: 8 },
+      adapters: { register: async definition => definitions.push(definition) },
+    },
+  }, {
+    contract: "cordisx.channel-service-config/v1",
+    schemaVersion: 1,
+    connections: [{ ...simulator, ref: { ...simulator.ref, tenantId: "outside" } }],
+  });
+  assert.equal(definitions.length, 0);
+});
+
+test("fails closed on malformed configuration or a missing Host revision", async () => {
+  await assert.rejects(() => apply({ channel: { configuration: { revision: 1 }, adapters: {} } }, {}), {
     name: "TypeError",
     message: "Channel service configuration is invalid",
+  });
+  await assert.rejects(() =>
+    apply({ channel: { configuration: {}, adapters: {} } }, {
+      contract: "cordisx.channel-service-config/v1",
+      schemaVersion: 1,
+      connections: [],
+    }), {
+    name: "TypeError",
+    message: "Channel service configuration revision is invalid",
   });
 });

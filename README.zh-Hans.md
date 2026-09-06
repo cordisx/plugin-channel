@@ -18,13 +18,15 @@ service-config、凭据与 Channel Manager 模块。这些文件只保留在 Git
 
 ## 所有权
 
-本插件将负责本地化 Channel route、页面 body 表现、view model、唯一 page factory
-与 lifecycle，以及 `src/channel.css`。
+本插件负责本地化 Channel route、页面 body 表现、view model、唯一 page factory
+与 lifecycle、`src/channel.css`，以及通过公共 `ctx.channel` 加载的 Simulator
+adapter definition。
 
 CordisX Host 继续负责 Manager chrome 与历史、凭据捕获、下载处理、语义 UI
-primitive、无障碍策略、原生集成和 Channel runtime/provider adapter。插件不会导入
+primitive、无障碍策略、原生集成、唯一 Channel runtime、含凭据 adapter transport
+与 adapter 发布权。插件不会导入
 Host 私有文件，也不会携带凭据、原始账号标识、文件系统路径、DOM handle 或
 transport callback。
 
-初始 package 保持 `0.0.0` 且 `private: true`，防止公共 seam 与可执行 package
-graph 完成前被误发布。
+package 保持 `0.1.0` 且 `private: true`，防止 Host-stamped service configuration
+revision 与最终 consumer 删除完成前被误发布。
