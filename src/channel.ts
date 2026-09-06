@@ -114,7 +114,7 @@ export const presentation = {
 
 const pages = [
   ["settings", "route.settings", "host:layers"],
-  ["create", "route.create", "host:create"],
+  ["create", "route.create", "host:new"],
   ["configuration", "route.configuration", "host:settings"],
   ["logs", "route.logs", "host:history"],
   ["runtime", "route.runtime", "host:open"],
