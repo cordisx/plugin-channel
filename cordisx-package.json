@@ -1,0 +1,25 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cordisx/cordisx-protocol/main/schemas/plugin-package.v8.schema.json",
+  "schemaVersion": 8,
+  "id": "channel",
+  "version": "0.1.0",
+  "entry": "./dist/channel.js",
+  "readme": "./README.md",
+  "canonicalSource": "https://github.com/cordisx/plugin-channel",
+  "distribution": {
+    "mode": "explicit-local-v1",
+    "signature": "unsupported"
+  },
+  "compatibility": {
+    "runtimeAbi": 1,
+    "protocolSchemas": [
+      "https://raw.githubusercontent.com/cordisx/cordisx-protocol/main/schemas/plugin-manifest.v8.schema.json"
+    ]
+  },
+  "dependencies": [],
+  "runtimeManifest": {
+    "path": "./runtime-manifest.json",
+    "schema": "https://raw.githubusercontent.com/cordisx/cordisx-protocol/main/schemas/plugin-manifest.v8.schema.json",
+    "digest": "sha256:855fde2c4267a477140677f4a35f69b792f9ed2f0eb62e6bdc58120dd75f4cbe"
+  }
+}

@@ -8,19 +8,19 @@ The initial public checkpoint is intentionally nonfunctional. The former
 built-in source depended on Host-private renderer and launcher modules. Those
 files are retained in Git history and are not published as standalone source.
 
-Executable migration depends on two formal public seams:
+Executable migration depended on two public seams:
 
-1. `cordisx/cordisx-protocol` must export TypeScript declarations for the
-   existing Channel Manager v2 contract family: runtime snapshot v3, request
-   and result v2, safe log page v2, and log export result v2.
-2. `cordisx/cordisx` must provide a source-bound renderer service that exposes
-   only versioned snapshots, subscriptions, exact fenced operations, safe log
-   pages, and Host-owned export handoff.
+1. `cordisx/cordisx-protocol` now exports the Channel Manager v2 contract
+   family at formal commit
+   `9654023d1b1077d6fd0d43a2d294459bab63216b`.
+2. `cordisx/cordisx` now provides the source-bound renderer service at formal
+   commit `4a33f62bb087ce410ebb1e3f2341f08c3968fce5`.
 
-The plugin will then own its localized routes, page bodies, model, lifecycle,
-and `src/channel.css`. The Host continues to own Manager chrome, routing
-history, credential capture, downloads, semantic controls, native integration,
-and the Channel runtime/provider adapter.
+The plugin candidate now owns its localized routes, page bodies, model,
+lifecycle, `src/channel.css`, and Simulator adapter definition. The Host
+continues to own Manager chrome, routing history, credential capture, downloads,
+semantic controls, native integration, the single Channel runtime,
+credential-bearing adapter transport, and adapter publication authority.
 
 No generic service-config bridge, raw account identifier, credential value or
 reference, filesystem path, DOM handle, transport callback, or private Host

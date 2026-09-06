@@ -2,22 +2,22 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import { test } from "node:test";
 
-test("publishes an explicit nonfunctional extraction checkpoint", async () => {
+test("publishes exact formal Protocol and Host baselines", async () => {
   const status = await import("../dist/status.js");
-  assert.equal(status.CHANNEL_PLUGIN_STATUS, "public-contract-pending");
-  assert.equal(status.REQUIRED_BASELINES.host, "1cbe9d0ff1a803b1486bb2ddcbedc98a187d4f11");
-  assert.equal(status.REQUIRED_BASELINES.protocol, "703a3d03f1b533c4d54bf51e5c8818b53bdda4f5");
+  assert.equal(status.CHANNEL_PLUGIN_STATUS, "package-verification");
+  assert.equal(status.REQUIRED_BASELINES.host, "dfb071e02eca0ef52f84d67b2393c25aced7d3f0");
+  assert.equal(status.REQUIRED_BASELINES.protocol, "3f0dbcd8b04ae83c920d2d913ac2c313af5f83f1");
 });
 
 test("keeps Host-private imports out of standalone source", async () => {
-  const names = await readdir(new URL("../src/", import.meta.url));
+  const names = await readdir(new URL("../src/", import.meta.url), { recursive: true });
   const sources = await Promise.all(
     names.filter(name => /\.[cm]?[jt]sx?$/.test(name)).map(name =>
       readFile(new URL(`../src/${name}`, import.meta.url), "utf8")
     ),
   );
   for (const source of sources) {
-    assert.doesNotMatch(source, /packages\/cli|\.\.\/\.\.\/(?:launcher|renderer)|channelManager/);
+    assert.doesNotMatch(source, /packages\/cli|\.\.\/\.\.\/(?:launcher|renderer)/);
   }
 });
 

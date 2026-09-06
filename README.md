@@ -9,30 +9,30 @@ history.
 
 ## Current checkpoint
 
-The repository is initialized but does not yet publish an executable plugin.
+The repository now builds an executable plugin candidate.
 The former built-in source depended on private Host renderer, service-config,
 credential, and Channel Manager modules. Those files remain in Git history for
 provenance and have been removed from the public source tree.
 
-Executable migration waits for formal public dependencies:
-
-- Protocol TypeScript declarations for the existing Channel Manager v2
-  contracts and runtime snapshot v3.
-- A source-bound Host renderer facade for snapshots, subscriptions, exact
-  fenced operations, safe log pages, and Host-owned export handoff.
+The candidate consumes the formal Protocol Channel Manager v2 types at
+`3f0dbcd8b04ae83c920d2d913ac2c313af5f83f1` and the formal Host provider at
+`dfb071e02eca0ef52f84d67b2393c25aced7d3f0`.
 
 See [MIGRATION.md](MIGRATION.md) for the boundary and delivery order.
 
 ## Ownership
 
-This plugin will own localized Channel routes, page body presentation, its view
-model, one page factory and lifecycle, and `src/channel.css`.
+This plugin owns localized Channel routes, page body presentation, its view
+model, one page factory and lifecycle, `src/channel.css`, and the Simulator
+adapter definition loaded through the public `ctx.channel` service.
 
 CordisX Host continues to own Manager chrome and history, credential capture,
 download handling, semantic UI primitives, accessibility policy, native
-integration, and the Channel runtime/provider adapter. The plugin will not
+integration, the single Channel runtime, credential-bearing adapter transport,
+and adapter publication authority. The plugin will not
 import private Host files or carry credentials, raw account identifiers,
 filesystem paths, DOM handles, or transport callbacks.
 
-The initial package is private at version `0.0.0` to prevent accidental
-publication before the public seam and executable package graph are complete.
+The package remains private at version `0.1.0` to prevent accidental
+publication before the Host-stamped service configuration revision and final
+consumer removal are complete.

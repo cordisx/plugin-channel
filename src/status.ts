@@ -1,7 +1,7 @@
-/** Standalone owner initialization; executable migration awaits the formal public facade. */
-export const CHANNEL_PLUGIN_STATUS = "public-contract-pending" as const;
+/** Executable owner candidate consuming the formal public Host provider. */
+export const CHANNEL_PLUGIN_STATUS = "package-verification" as const;
 
 export const REQUIRED_BASELINES = Object.freeze({
-  host: "1cbe9d0ff1a803b1486bb2ddcbedc98a187d4f11",
-  protocol: "703a3d03f1b533c4d54bf51e5c8818b53bdda4f5",
+  host: "dfb071e02eca0ef52f84d67b2393c25aced7d3f0",
+  protocol: "3f0dbcd8b04ae83c920d2d913ac2c313af5f83f1",
 });

@@ -1,15 +1,30 @@
 {
   "name": "@cordisx/channel",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "CordisX channel management plugin",
   "license": "AGPL-3.0-or-later",
   "type": "module",
-  "main": "./dist/status.js",
-  "types": "./dist/status.d.ts",
-  "files": ["dist", "README.md", "README.zh-Hans.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+  "main": "./dist/channel.js",
+  "types": "./dist/channel.d.ts",
+  "files": [
+    "dist",
+    "cordisx-package.json",
+    "runtime-manifest.json",
+    "README.md",
+    "README.zh-Hans.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/channel.d.ts",
+      "import": "./dist/channel.js",
+      "default": "./dist/channel.js"
+    }
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node scripts/clean-dist.mjs && tsc -p tsconfig.json && node scripts/build-runtime-bundle.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build && node --test test/*.test.mjs",
     "lint:source": "eslint src test",
@@ -17,17 +32,33 @@
     "lint": "npm run lint:source && npm run lint:styles",
     "format": "dprint fmt",
     "format:check": "dprint check",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm test"
+    "check": "node --check src/service.mjs && npm run format:check && npm run lint && npm run typecheck && npm test"
   },
   "engines": { "node": ">=22.19" },
   "devDependencies": {
     "@cordisx/eslint-config": "github:cordisx/cordisxmono#c63c2e8c2ba7e11502934a52ad2ce3734e804cdc",
+    "@cordisx/protocol": "github:cordisx/cordisx-protocol#3f0dbcd8b04ae83c920d2d913ac2c313af5f83f1",
     "@projectwallace/stylelint-plugin": "0.7.0",
+    "@deepseek-ai/cordis": "4.0.1",
     "@typescript-eslint/parser": "8.69.0",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
     "dprint": "0.57.1",
     "eslint": "9.39.4",
     "stylelint": "17.15.0",
     "stylelint-config-standard": "40.0.0",
-    "typescript": "5.9.2"
-  }
+    "typescript": "5.9.2",
+    "cordisx": "github:cordisx/cordisx#dfb071e02eca0ef52f84d67b2393c25aced7d3f0",
+    "esbuild": "0.28.2",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cordisx/plugin-channel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cordisx/plugin-channel/issues"
+  },
+  "homepage": "https://github.com/cordisx/plugin-channel#readme"
 }
