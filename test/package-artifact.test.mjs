@@ -45,8 +45,9 @@ test("keeps source, runtime manifest, and bundled module identity aligned", asyn
     readFile(new URL("../package.json", import.meta.url), "utf8").then(JSON.parse),
   ]);
   assert.deepEqual(bundled.manifest, declared);
-  assert.equal(bundled.manifest.services.length, 0);
+  assert.deepEqual(bundled.manifest.services.map(service => service.entry), ["./dist/service.mjs"]);
   assert.equal(packageManifest.id, declared.id);
   assert.equal(packageManifest.version, npmManifest.version);
   await readFile(new URL(`..${packageManifest.entry.slice(1)}`, import.meta.url));
+  await readFile(new URL(`..${declared.services[0].entry.slice(1)}`, import.meta.url));
 });

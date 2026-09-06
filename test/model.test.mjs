@@ -118,7 +118,7 @@ test("shows only operations advertised by the formal Host provider", () => {
   assert.equal(canQueryLogs(unavailable.accounts[0]), true);
   assert.equal(canExportLogs(unavailable.accounts[0]), false);
 });
-+test("creates a simulator through issuance and fenced execution", async () => {
+test("creates a simulator through issuance and fenced execution", async () => {
   const calls = [];
   const manager = {
     issue: async request => {

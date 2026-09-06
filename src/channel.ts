@@ -26,11 +26,61 @@ export const manifest = {
   name: "Channels",
   capabilities: [
     { name: "channel.accounts.read", required: true, scope: {} },
-    { name: "channel.accounts.connect", required: false, scope: {} },
+    {
+      name: "channel.accounts.connect",
+      required: false,
+      scope: { channelAccounts: [{ adapterId: "simulator", accountId: "local" }] },
+    },
+    {
+      name: "channel.events.receive",
+      required: false,
+      scope: { channelTenants: [{ adapterId: "simulator", accountId: "local", tenantId: "test" }] },
+    },
+    {
+      name: "channel.events.subscribe",
+      required: false,
+      scope: { channelTenants: [{ adapterId: "simulator", accountId: "local", tenantId: "test" }] },
+    },
+    {
+      name: "channel.messages.send",
+      required: false,
+      scope: {
+        channelConversations: [{
+          adapterId: "simulator",
+          accountId: "local",
+          tenantId: "test",
+          conversationId: "direct-alice",
+          kind: "direct",
+        }],
+      },
+    },
     { name: "channel.bindings.read", required: false, scope: {} },
     { name: "channel.bindings.write", required: false, scope: {} },
+    {
+      name: "channel.attachments.read",
+      required: false,
+      scope: {
+        channelConversations: [{
+          adapterId: "simulator",
+          accountId: "local",
+          tenantId: "test",
+          conversationId: "direct-alice",
+          kind: "direct",
+        }],
+      },
+    },
   ],
-  services: [],
+  services: [{
+    id: "runtime",
+    kind: "channel-adapter",
+    entry: "./dist/service.mjs",
+    configuration: {
+      kind: "host",
+      schema:
+        "https://raw.githubusercontent.com/cordisx/cordisx-protocol/main/schemas/channel-service-config.v1.schema.json",
+      configApplies: "restart",
+    },
+  }],
 } as const satisfies CordisXPluginManifestV8;
 
 interface Messages {

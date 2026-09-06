@@ -32,7 +32,7 @@
     "lint": "npm run lint:source && npm run lint:styles",
     "format": "dprint fmt",
     "format:check": "dprint check",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm test"
+    "check": "node --check src/service.mjs && npm run format:check && npm run lint && npm run typecheck && npm test"
   },
   "engines": { "node": ">=22.19" },
   "devDependencies": {

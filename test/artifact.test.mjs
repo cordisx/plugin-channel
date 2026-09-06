@@ -11,10 +11,10 @@ test("builds a bounded standalone browser module with owned CSS", async () => {
   assert.doesNotMatch(source, /packages\/cli|src\/renderer|src\/launcher/);
 });
 
-test("exports the v8 renderer manifest without a private Node service", async () => {
+test("exports the v8 manifest with the public Channel runtime service", async () => {
   const plugin = await import("../dist/channel.js");
   assert.equal(plugin.manifest.schemaVersion, 8);
   assert.equal(plugin.manifest.id, "channel");
-  assert.deepEqual(plugin.manifest.services, []);
+  assert.deepEqual(plugin.manifest.services.map(service => service.entry), ["./dist/service.mjs"]);
   assert.ok(plugin.inject.includes("channelManager"));
 });

@@ -1,4 +1,5 @@
 import { build } from "esbuild";
+import { copyFile } from "node:fs/promises";
 
 await build({
   bundle: true,
@@ -20,3 +21,5 @@ await build({
   sourcemap: false,
   target: ["chrome120"],
 });
+
+await copyFile("src/service.mjs", "dist/service.mjs");
