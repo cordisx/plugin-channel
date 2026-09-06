@@ -9,6 +9,7 @@ import {
   type CordisXManagerContentNavigationDeclarationV1,
   type CordisXMessageParams,
   type CordisXPageMetadataV3,
+  type CordisXPluginManifestV8,
   type CordisXPluginPresentation,
   type CordisXRouteDefinitionV2,
 } from "cordisx/contracts";
@@ -30,7 +31,7 @@ export const manifest = {
     { name: "channel.bindings.write", required: false, scope: {} },
   ],
   services: [],
-} as const;
+} as const satisfies CordisXPluginManifestV8;
 
 interface Messages {
   "plugin.name": undefined;
