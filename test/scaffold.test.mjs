@@ -35,3 +35,12 @@ test("scopes binding mutation to the manifest-authorized simulator tenant", asyn
     channelTenants: [{ adapterId: "simulator", accountId: "local", tenantId: "test" }],
   });
 });
+
+test("uses the public Host new-action icon token for the create page", async () => {
+  const source = await import("../dist/channel.js");
+  // The bundled source keeps page metadata as a local constant; assert the public token is present and the removed token is absent.
+  const bundled = await readFile(new URL("../dist/channel.js", import.meta.url), "utf8");
+  assert.match(bundled, /host:new/);
+  assert.doesNotMatch(bundled, /host:create/);
+  assert.equal(source.manifest.id, "channel");
+});
