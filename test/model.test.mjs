@@ -3,6 +3,9 @@ import { test } from "node:test";
 import {
   accountByToken,
   bindingsForAccount,
+  canCreateConnection,
+  canExportLogs,
+  canQueryLogs,
   createChannelConnection,
   operationFence,
   routeToken,
@@ -69,6 +72,21 @@ test("selects only opaque connection-token projections", () => {
   assert.deepEqual(bindingsForAccount(snapshot, "chm1_connection"), snapshot.bindings);
   assert.equal(routeToken("chm1_connection"), "chm1_connection");
   assert.equal(routeToken(null), undefined);
+});
+
+test("shows only operations advertised by the formal Host provider", () => {
+  const unavailable = {
+    ...snapshot,
+    availableOperations: [],
+    accounts: [{
+      ...snapshot.accounts[0],
+      availableOperations: ["logs.query"],
+    }],
+  };
+  assert.equal(canCreateConnection(unavailable, "simulator"), false);
+  assert.equal(canCreateConnection(unavailable, "feishu"), false);
+  assert.equal(canQueryLogs(unavailable.accounts[0]), true);
+  assert.equal(canExportLogs(unavailable.accounts[0]), false);
 });
 +test("creates a simulator through issuance and fenced execution", async () => {
   const calls = [];

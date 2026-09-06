@@ -114,6 +114,23 @@ export function routeToken(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
+export function canCreateConnection(
+  snapshot: ChannelManagerSnapshotV3,
+  platform: "simulator" | "feishu" | "lark",
+): boolean {
+  return snapshot.availableOperations.includes(
+    platform === "simulator" ? "target.connection.create.simulator" : "target.credential.capture.create",
+  );
+}
+
+export function canQueryLogs(account: ChannelManagerAccountV3 | undefined): boolean {
+  return account?.availableOperations.includes("logs.query") ?? false;
+}
+
+export function canExportLogs(account: ChannelManagerAccountV3 | undefined): boolean {
+  return account?.availableOperations.includes("logs.export") ?? false;
+}
+
 export function accountByToken(
   snapshot: ChannelManagerSnapshotV3,
   token: string | undefined,

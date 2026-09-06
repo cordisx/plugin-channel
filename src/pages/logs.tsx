@@ -1,7 +1,7 @@
 import type { ChannelManagerLogEntryV2 } from "@cordisx/protocol/channel-manager/v2";
 import { Button, EmptyState } from "cordisx/ui";
 import { useEffect, useState } from "cordisx/react";
-import { accountByToken, operationFence, routeToken, useChannelModel } from "../model.js";
+import { accountByToken, canExportLogs, canQueryLogs, operationFence, routeToken, useChannelModel } from "../model.js";
 import type { ChannelPageProps } from "../page-types.js";
 import { copy } from "../locales.js";
 import { ChannelShell } from "../shell.js";
@@ -12,8 +12,8 @@ export function ChannelLogs(props: ChannelPageProps) {
   const [entries, setEntries] = useState<readonly ChannelManagerLogEntryV2[]>([]);
   const [cursor, setCursor] = useState<string>();
   const [status, setStatus] = useState("");
-  const canQuery = account?.availableOperations.includes("logs.query") ?? false;
-  const canExport = account?.availableOperations.includes("logs.export") ?? false;
+  const canQuery = canQueryLogs(account);
+  const canExport = canExportLogs(account);
 
   const load = async (next?: string, append = false) => {
     if (account === undefined || !canQuery) return;

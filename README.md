@@ -15,11 +15,8 @@ credential, and Channel Manager modules. Those files remain in Git history for
 provenance and have been removed from the public source tree.
 
 The candidate consumes the formal Protocol Channel Manager v2 types at
-`9654023d1b1077d6fd0d43a2d294459bab63216b`. Activation still waits for one
-formal Host dependency:
-
-- A source-bound Host renderer facade for snapshots, subscriptions, exact
-  fenced operations, safe log pages, and Host-owned export handoff.
+`9654023d1b1077d6fd0d43a2d294459bab63216b` and the formal Host provider at
+`4a33f62bb087ce410ebb1e3f2341f08c3968fce5`.
 
 See [MIGRATION.md](MIGRATION.md) for the boundary and delivery order.
 

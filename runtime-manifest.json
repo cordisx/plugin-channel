@@ -1,0 +1,29 @@
+{
+  "$schema": "https://raw.githubusercontent.com/cordisx/cordisx-protocol/main/schemas/plugin-manifest.v8.schema.json",
+  "schemaVersion": 8,
+  "id": "channel",
+  "name": "Channels",
+  "capabilities": [
+    {
+      "name": "channel.accounts.read",
+      "required": true,
+      "scope": {}
+    },
+    {
+      "name": "channel.accounts.connect",
+      "required": false,
+      "scope": {}
+    },
+    {
+      "name": "channel.bindings.read",
+      "required": false,
+      "scope": {}
+    },
+    {
+      "name": "channel.bindings.write",
+      "required": false,
+      "scope": {}
+    }
+  ],
+  "services": []
+}

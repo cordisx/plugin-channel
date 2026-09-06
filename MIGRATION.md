@@ -13,9 +13,8 @@ Executable migration depended on two public seams:
 1. `cordisx/cordisx-protocol` now exports the Channel Manager v2 contract
    family at formal commit
    `9654023d1b1077d6fd0d43a2d294459bab63216b`.
-2. `cordisx/cordisx` must provide a source-bound renderer service that exposes
-   only versioned snapshots, subscriptions, exact fenced operations, safe log
-   pages, and Host-owned export handoff.
+2. `cordisx/cordisx` now provides the source-bound renderer service at formal
+   commit `4a33f62bb087ce410ebb1e3f2341f08c3968fce5`.
 
 The plugin candidate now owns its localized routes, page bodies, model,
 lifecycle, and `src/channel.css`. The Host continues to own Manager chrome, routing

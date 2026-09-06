@@ -2,7 +2,7 @@ import { type FormEvent, useState } from "cordisx/react";
 import { Button, Icon, Stack, Text } from "cordisx/ui";
 import type { ChannelPageProps } from "../page-types.js";
 import { copy } from "../locales.js";
-import { createChannelConnection, useChannelModel } from "../model.js";
+import { canCreateConnection, createChannelConnection, useChannelModel } from "../model.js";
 import { ChannelShell } from "../shell.js";
 
 export function ChannelCreate(props: ChannelPageProps) {
@@ -12,9 +12,7 @@ export function ChannelCreate(props: ChannelPageProps) {
   const [selectors, setSelectors] = useState<readonly ("direct" | "group")[]>(["direct"]);
   const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
-  const available = snapshot.availableOperations.includes(
-    platform === "simulator" ? "target.connection.create.simulator" : "target.credential.capture.create",
-  );
+  const available = canCreateConnection(snapshot, platform);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

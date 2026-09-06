@@ -1,15 +1,30 @@
 {
   "name": "@cordisx/channel",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "private": true,
   "description": "CordisX channel management plugin",
   "license": "AGPL-3.0-or-later",
   "type": "module",
   "main": "./dist/channel.js",
   "types": "./dist/channel.d.ts",
-  "files": ["dist", "README.md", "README.zh-Hans.md", "LICENSE", "THIRD_PARTY_NOTICES.md"],
+  "files": [
+    "dist",
+    "cordisx-package.json",
+    "runtime-manifest.json",
+    "README.md",
+    "README.zh-Hans.md",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/channel.d.ts",
+      "import": "./dist/channel.js",
+      "default": "./dist/channel.js"
+    }
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json && node scripts/build-runtime-bundle.mjs",
+    "build": "node scripts/clean-dist.mjs && tsc -p tsconfig.json && node scripts/build-runtime-bundle.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "npm run build && node --test test/*.test.mjs",
     "lint:source": "eslint src test",
@@ -26,14 +41,24 @@
     "@projectwallace/stylelint-plugin": "0.7.0",
     "@deepseek-ai/cordis": "4.0.1",
     "@typescript-eslint/parser": "8.69.0",
+    "ajv": "8.20.0",
+    "ajv-formats": "3.0.1",
     "dprint": "0.57.1",
     "eslint": "9.39.4",
     "stylelint": "17.15.0",
     "stylelint-config-standard": "40.0.0",
     "typescript": "5.9.2",
-    "cordisx": "github:cordisx/cordisx#1cbe9d0ff1a803b1486bb2ddcbedc98a187d4f11",
+    "cordisx": "github:cordisx/cordisx#4a33f62bb087ce410ebb1e3f2341f08c3968fce5",
     "esbuild": "0.28.2",
     "react": "19.2.8",
     "react-dom": "19.2.8"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cordisx/plugin-channel.git"
+  },
+  "bugs": {
+    "url": "https://github.com/cordisx/plugin-channel/issues"
+  },
+  "homepage": "https://github.com/cordisx/plugin-channel#readme"
 }

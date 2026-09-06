@@ -2,10 +2,10 @@ import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import { test } from "node:test";
 
-test("publishes an explicit nonfunctional extraction checkpoint", async () => {
+test("publishes exact formal Protocol and Host baselines", async () => {
   const status = await import("../dist/status.js");
-  assert.equal(status.CHANNEL_PLUGIN_STATUS, "host-provider-pending");
-  assert.equal(status.REQUIRED_BASELINES.host, "1cbe9d0ff1a803b1486bb2ddcbedc98a187d4f11");
+  assert.equal(status.CHANNEL_PLUGIN_STATUS, "package-verification");
+  assert.equal(status.REQUIRED_BASELINES.host, "4a33f62bb087ce410ebb1e3f2341f08c3968fce5");
   assert.equal(status.REQUIRED_BASELINES.protocol, "9654023d1b1077d6fd0d43a2d294459bab63216b");
 });
 
