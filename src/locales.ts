@@ -5,6 +5,7 @@ export type CopyKey =
   | "create.description"
   | "create.groups"
   | "create.name"
+  | "create.platform"
   | "create.save"
   | "create.unavailable"
   | "configuration"
@@ -27,9 +28,10 @@ const EN: Record<CopyKey, string> = {
   accounts: "Channel accounts",
   "accounts.empty": "No channel accounts are available.",
   create: "New channel",
-  "create.description": "Create a credential-free local simulator connection.",
+  "create.description": "Create a simulator connection or continue through Host-owned credential capture.",
   "create.groups": "Allow group messages",
   "create.name": "Display name",
+  "create.platform": "Platform",
   "create.save": "Create channel",
   "create.unavailable": "Channel creation is unavailable.",
   configuration: "Configuration",
@@ -53,9 +55,10 @@ const ZH: Record<CopyKey, string> = {
   accounts: "渠道账号",
   "accounts.empty": "暂无可用渠道账号。",
   create: "新建渠道",
-  "create.description": "创建无需凭据的本地模拟器连接。",
+  "create.description": "创建模拟器连接，或继续使用 Host 所有的凭据捕获。",
   "create.groups": "允许群消息",
   "create.name": "显示名称",
+  "create.platform": "平台",
   "create.save": "创建渠道",
   "create.unavailable": "当前无法创建渠道。",
   configuration: "配置",

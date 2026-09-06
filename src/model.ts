@@ -29,23 +29,23 @@ export function requestId(): string {
   return globalThis.crypto?.randomUUID?.() ?? `channel-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
 
-export function operationFence(snapshot: ChannelManagerSnapshotV3) {
+export function operationFence(snapshot: ChannelManagerSnapshotV3, expectedRevision = snapshot.revision) {
   return {
     contract: "cordisx.channel-manager-request/v2",
     schemaVersion: 2,
     requestId: requestId(),
-    expectedRevision: snapshot.revision,
+    expectedRevision,
     profileId: snapshot.profileId,
     hostGeneration: snapshot.hostGeneration,
   } as const;
 }
 
-export function targetFence(snapshot: ChannelManagerSnapshotV3) {
+export function targetFence(snapshot: ChannelManagerSnapshotV3, expectedRevision = snapshot.revision) {
   return {
     contract: "cordisx.channel-manager-target-request/v1",
     schemaVersion: 1,
     requestId: requestId(),
-    expectedRevision: snapshot.revision,
+    expectedRevision,
     profileId: snapshot.profileId,
     hostGeneration: snapshot.hostGeneration,
   } as const;
