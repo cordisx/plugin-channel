@@ -4,23 +4,53 @@ import type {
   ChannelManagerSnapshotV3,
   ChannelManagerV2,
 } from "@cordisx/protocol/channel-manager/v2";
-import { useSyncExternalStore } from "cordisx/react";
+import { useMemo, useSyncExternalStore } from "cordisx/react";
 
 export interface ChannelPageModel {
   readonly manager: ChannelManagerV2;
   readonly snapshot: ChannelManagerSnapshotV3;
 }
 
+export interface ChannelStore {
+  snapshot(): ChannelManagerSnapshotV3;
+  subscribe(listener: () => void): () => void;
+}
+
+export function createChannelStore(manager: ChannelManagerV2): ChannelStore {
+  let current = manager.snapshot();
+  let sourceSubscription: ReturnType<ChannelManagerV2["subscribe"]> | undefined;
+  const listeners = new Set<() => void>();
+  const refresh = () => {
+    current = manager.snapshot();
+    for (const listener of listeners) listener();
+  };
+  return {
+    snapshot: () => current,
+    subscribe: listener => {
+      listeners.add(listener);
+      if (sourceSubscription === undefined) {
+        sourceSubscription = manager.subscribe(refresh);
+        current = manager.snapshot();
+      }
+      return () => {
+        listeners.delete(listener);
+        if (listeners.size === 0) {
+          sourceSubscription?.dispose();
+          sourceSubscription = undefined;
+        }
+      };
+    },
+  };
+}
+
 export function useChannelModel(manager: ChannelManagerV2): ChannelPageModel {
+  const store = useMemo(() => createChannelStore(manager), [manager]);
   return {
     manager,
     snapshot: useSyncExternalStore(
-      listener => {
-        const subscription = manager.subscribe(listener);
-        return () => subscription.dispose();
-      },
-      () => manager.snapshot(),
-      () => manager.snapshot(),
+      store.subscribe,
+      store.snapshot,
+      store.snapshot,
     ),
   };
 }

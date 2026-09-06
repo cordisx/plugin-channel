@@ -7,6 +7,7 @@ import {
   canExportLogs,
   canQueryLogs,
   createChannelConnection,
+  createChannelStore,
   operationFence,
   routeToken,
   targetFence,
@@ -44,6 +45,35 @@ const snapshot = {
   }],
   pendingAuthorizations: [],
 };
+
+test("keeps the external-store snapshot stable until a Host notification", () => {
+  let current = snapshot;
+  let sourceListener;
+  let disposed = 0;
+  const manager = {
+    snapshot: () => ({ ...current }),
+    subscribe: listener => {
+      sourceListener = listener;
+      return { dispose: () => disposed += 1 };
+    },
+  };
+  const store = createChannelStore(manager);
+  const initial = store.snapshot();
+  assert.equal(store.snapshot(), initial);
+  let notifications = 0;
+  const dispose = store.subscribe(() => notifications += 1);
+  const subscribed = store.snapshot();
+  assert.equal(store.snapshot(), subscribed);
+  current = { ...snapshot, revision: 8 };
+  sourceListener();
+  assert.equal(notifications, 1);
+  assert.equal(store.snapshot().revision, 8);
+  assert.notEqual(store.snapshot(), subscribed);
+  const refreshed = store.snapshot();
+  assert.equal(store.snapshot(), refreshed);
+  dispose();
+  assert.equal(disposed, 1);
+});
 
 test("builds every request from the exact current snapshot fence", () => {
   const target = {
