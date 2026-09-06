@@ -32,9 +32,12 @@
     "lint": "npm run lint:source && npm run lint:styles",
     "format": "dprint fmt",
     "format:check": "dprint check",
-    "check": "node --check src/service.mjs && npm run format:check && npm run lint && npm run typecheck && npm test"
+    "check": "node --check src/service.mjs && npm run format:check && npm run lint && npm run typecheck && npm test",
+    "prepare": "npm run build"
   },
-  "engines": { "node": ">=22.19" },
+  "engines": {
+    "node": ">=22.19"
+  },
   "devDependencies": {
     "@cordisx/eslint-config": "github:cordisx/cordisxmono#c63c2e8c2ba7e11502934a52ad2ce3734e804cdc",
     "@cordisx/protocol": "github:cordisx/cordisx-protocol#3f0dbcd8b04ae83c920d2d913ac2c313af5f83f1",
