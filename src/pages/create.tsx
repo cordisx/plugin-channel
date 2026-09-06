@@ -2,7 +2,7 @@ import { type FormEvent, useState } from "cordisx/react";
 import { Button, Icon, Stack, Text } from "cordisx/ui";
 import type { ChannelPageProps } from "../page-types.js";
 import { copy } from "../locales.js";
-import { operationFence, targetFence, useChannelModel } from "../model.js";
+import { createChannelConnection, useChannelModel } from "../model.js";
 import { ChannelShell } from "../shell.js";
 
 export function ChannelCreate(props: ChannelPageProps) {
@@ -16,64 +16,17 @@ export function ChannelCreate(props: ChannelPageProps) {
     platform === "simulator" ? "target.connection.create.simulator" : "target.credential.capture.create",
   );
 
-  const issueConnectionDraft = async () => {
-    if (platform === "simulator") {
-      const issued = await manager.issue({
-        ...targetFence(snapshot),
-        operation: "target.connection.create.simulator",
-        adapterKind: "simulator",
-        target: { kind: "root" },
-      });
-      return issued.status === "applied" && issued.operation === "target.connection.create.simulator"
-          && issued.target.kind === "connection-draft"
-        ? issued
-        : undefined;
-    }
-    const captureTarget = await manager.issue({
-      ...targetFence(snapshot),
-      operation: "target.credential.capture.create",
-      purpose: "create",
-      adapterKind: platform,
-      target: { kind: "root" },
-    });
-    if (
-      captureTarget.status !== "applied" || captureTarget.operation !== "target.credential.capture.create"
-      || captureTarget.target.kind !== "credential-capture"
-    ) return undefined;
-    const captured = await manager.execute({
-      ...operationFence(snapshot, captureTarget.revision),
-      operation: "credential.capture",
-      target: captureTarget.target,
-    });
-    if (captured.status !== "applied" || captured.operation !== "credential.capture") return undefined;
-    const issued = await manager.issue({
-      ...targetFence(snapshot, captured.revision),
-      operation: "target.connection.create",
-      target: { kind: "credential-draft", credentialDraftToken: captured.credentialDraftToken },
-    });
-    return issued.status === "applied" && issued.operation === "target.connection.create"
-        && issued.target.kind === "connection-draft"
-      ? issued
-      : undefined;
-  };
-
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!available || name.trim() === "") return;
     setBusy(true);
     try {
-      const issued = await issueConnectionDraft();
-      if (issued === undefined) {
-        setStatus(copy(props.locale, "create.unavailable"));
-        return;
-      }
-      const result = await manager.execute({
-        ...operationFence(snapshot, issued.revision),
-        operation: "connection.create",
-        target: issued.target,
-        draft: { displayName: name.trim(), selectors },
+      const result = await createChannelConnection(manager, snapshot, {
+        platform,
+        displayName: name.trim(),
+        selectors,
       });
-      if (result.status === "applied") {
+      if (result === "applied") {
         await props.navigation.navigate({ id: "settings" });
       } else setStatus(copy(props.locale, "create.unavailable"));
     } finally {

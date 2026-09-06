@@ -51,6 +51,65 @@ export function targetFence(snapshot: ChannelManagerSnapshotV3, expectedRevision
   } as const;
 }
 
+export async function createChannelConnection(
+  manager: ChannelManagerV2,
+  snapshot: ChannelManagerSnapshotV3,
+  input: {
+    readonly platform: "simulator" | "feishu" | "lark";
+    readonly displayName: string;
+    readonly selectors: readonly ("direct" | "group")[];
+  },
+): Promise<"applied" | "conflict" | "rejected" | "unavailable"> {
+  let issued;
+  if (input.platform === "simulator") {
+    issued = await manager.issue({
+      ...targetFence(snapshot),
+      operation: "target.connection.create.simulator",
+      adapterKind: "simulator",
+      target: { kind: "root" },
+    });
+    if (
+      issued.status !== "applied" || issued.operation !== "target.connection.create.simulator"
+      || issued.target.kind !== "connection-draft"
+    ) return issued.status;
+  } else {
+    const captureTarget = await manager.issue({
+      ...targetFence(snapshot),
+      operation: "target.credential.capture.create",
+      purpose: "create",
+      adapterKind: input.platform,
+      target: { kind: "root" },
+    });
+    if (
+      captureTarget.status !== "applied" || captureTarget.operation !== "target.credential.capture.create"
+      || captureTarget.target.kind !== "credential-capture"
+    ) return captureTarget.status;
+    const captured = await manager.execute({
+      ...operationFence(snapshot, captureTarget.revision),
+      operation: "credential.capture",
+      target: captureTarget.target,
+    });
+    if (captured.status !== "applied" || captured.operation !== "credential.capture") return captured.status;
+    issued = await manager.issue({
+      ...targetFence(snapshot, captured.revision),
+      operation: "target.connection.create",
+      target: { kind: "credential-draft", credentialDraftToken: captured.credentialDraftToken },
+    });
+    if (
+      issued.status !== "applied" || issued.operation !== "target.connection.create"
+      || issued.target.kind !== "connection-draft"
+    ) return issued.status;
+  }
+
+  const result = await manager.execute({
+    ...operationFence(snapshot, issued.revision),
+    operation: "connection.create",
+    target: issued.target,
+    draft: { displayName: input.displayName, selectors: input.selectors },
+  });
+  return result.status;
+}
+
 export function routeToken(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }

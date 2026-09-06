@@ -1,6 +1,13 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { accountByToken, bindingsForAccount, operationFence, routeToken, targetFence } from "../dist/model.js";
+import {
+  accountByToken,
+  bindingsForAccount,
+  createChannelConnection,
+  operationFence,
+  routeToken,
+  targetFence,
+} from "../dist/model.js";
 
 const snapshot = {
   contract: "cordisx.channel-runtime-snapshot/v3",
@@ -62,4 +69,115 @@ test("selects only opaque connection-token projections", () => {
   assert.deepEqual(bindingsForAccount(snapshot, "chm1_connection"), snapshot.bindings);
   assert.equal(routeToken("chm1_connection"), "chm1_connection");
   assert.equal(routeToken(null), undefined);
+});
++test("creates a simulator through issuance and fenced execution", async () => {
+  const calls = [];
+  const manager = {
+    issue: async request => {
+      calls.push(request);
+      return {
+        ...request,
+        contract: "cordisx.channel-manager-target-result/v1",
+        status: "applied",
+        revision: 8,
+        code: "ok",
+        target: { kind: "connection-draft", connectionDraftToken: "chm1_draft" },
+        expiresAt: "2026-09-07T00:01:00.000Z",
+      };
+    },
+    execute: async request => {
+      calls.push(request);
+      return {
+        ...request,
+        contract: "cordisx.channel-manager-result/v2",
+        status: "applied",
+        revision: 9,
+        code: "ok",
+        connectionToken: "chm1_connection",
+      };
+    },
+  };
+
+  assert.equal(
+    await createChannelConnection(manager, snapshot, {
+      platform: "simulator",
+      displayName: "Local",
+      selectors: ["direct"],
+    }),
+    "applied",
+  );
+  assert.deepEqual(calls.map(call => call.operation), [
+    "target.connection.create.simulator",
+    "connection.create",
+  ]);
+  assert.equal(calls[1].expectedRevision, 8);
+});
+
+test("keeps real-adapter credentials inside the Host capture lineage", async () => {
+  const calls = [];
+  const manager = {
+    issue: async request => {
+      calls.push(request);
+      if (request.operation === "target.credential.capture.create") {
+        return {
+          ...request,
+          contract: "cordisx.channel-manager-target-result/v1",
+          status: "applied",
+          revision: 8,
+          code: "ok",
+          target: { kind: "credential-capture", captureToken: "chm1_capture" },
+          expiresAt: "2026-09-07T00:01:00.000Z",
+        };
+      }
+      return {
+        ...request,
+        contract: "cordisx.channel-manager-target-result/v1",
+        status: "applied",
+        revision: 10,
+        code: "ok",
+        target: { kind: "connection-draft", connectionDraftToken: "chm1_connection_draft" },
+        expiresAt: "2026-09-07T00:01:00.000Z",
+      };
+    },
+    execute: async request => {
+      calls.push(request);
+      if (request.operation === "credential.capture") {
+        return {
+          ...request,
+          contract: "cordisx.channel-manager-result/v2",
+          status: "applied",
+          revision: 9,
+          code: "ok",
+          credentialDraftToken: "chm1_credential_draft",
+          expiresAt: "2026-09-07T00:01:00.000Z",
+        };
+      }
+      return {
+        ...request,
+        contract: "cordisx.channel-manager-result/v2",
+        status: "applied",
+        revision: 11,
+        code: "ok",
+        connectionToken: "chm1_connection",
+      };
+    },
+  };
+
+  assert.equal(
+    await createChannelConnection(manager, snapshot, {
+      platform: "feishu",
+      displayName: "Support",
+      selectors: ["direct", "group"],
+    }),
+    "applied",
+  );
+  assert.deepEqual(calls.map(call => call.operation), [
+    "target.credential.capture.create",
+    "credential.capture",
+    "target.connection.create",
+    "connection.create",
+  ]);
+  assert.equal("secret" in calls[1], false);
+  assert.equal(calls[2].expectedRevision, 9);
+  assert.equal(calls[3].expectedRevision, 10);
 });
