@@ -2,6 +2,7 @@
 
 此公开仓库是 CordisX Channel 管理插件的 owner。仓库保留了原 Host 内置目录截至
 Host 提交 `1cbe9d0ff1a803b1486bb2ddcbedc98a187d4f11` 的筛选 Git 作者历史。
+仓库继续采用该来源历史的 AGPL-3.0-or-later 许可证。
 
 ## 当前检查点
 

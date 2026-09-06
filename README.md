@@ -4,6 +4,8 @@ This public repository is the owner of the CordisX Channel management plugin.
 It preserves the filtered Git authorship history of the former built-in Host
 directory through Host commit
 `1cbe9d0ff1a803b1486bb2ddcbedc98a187d4f11`.
+The repository is licensed under AGPL-3.0-or-later, matching that source
+history.
 
 ## Current checkpoint
 
