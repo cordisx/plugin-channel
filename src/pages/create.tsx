@@ -1,3 +1,4 @@
+import { notifyResult } from "../notifications.js";
 import { type FormEvent, useState } from "cordisx/react";
 import { Button, Icon, Stack, Text } from "cordisx/ui";
 import type { ChannelPageProps } from "../page-types.js";
@@ -10,7 +11,6 @@ export function ChannelCreate(props: ChannelPageProps) {
   const [platform, setPlatform] = useState<"simulator" | "feishu" | "lark">("simulator");
   const [name, setName] = useState("");
   const [selectors, setSelectors] = useState<readonly ("direct" | "group")[]>(["direct"]);
-  const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const available = canCreateConnection(snapshot, platform);
 
@@ -26,7 +26,9 @@ export function ChannelCreate(props: ChannelPageProps) {
       });
       if (result === "applied") {
         await props.navigation.navigate({ id: "settings" });
-      } else setStatus(copy(props.locale, "create.unavailable"));
+      } else notifyResult(props, "connection.create", false);
+    } catch {
+      notifyResult(props, "connection.create", false);
     } finally {
       setBusy(false);
     }
@@ -59,7 +61,6 @@ export function ChannelCreate(props: ChannelPageProps) {
           </label>
         </Stack>
         <div className="cxc-channel-actions">
-          <span className="cxc-channel-note" role="status">{status}</span>
           <Button variant="primary" type="submit" disabled={busy || !available || name.trim() === ""}>
             <Icon name="success" />
             {copy(props.locale, "create.save")}

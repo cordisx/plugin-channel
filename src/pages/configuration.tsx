@@ -1,3 +1,4 @@
+import { notifyResult } from "../notifications.js";
 import { useState } from "cordisx/react";
 import { Button, EmptyState, Stack, Text } from "cordisx/ui";
 import { copy } from "../locales.js";
@@ -9,7 +10,6 @@ export function ChannelConfiguration(props: ChannelPageProps) {
   const { manager, snapshot } = useChannelModel(props.manager);
   const account = accountByToken(snapshot, routeToken(props.params.connectionToken));
   const [name, setName] = useState(account?.displayName ?? "");
-  const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   if (account === undefined) {
     return (
@@ -30,7 +30,9 @@ export function ChannelConfiguration(props: ChannelPageProps) {
           ? { ...operationFence(snapshot), operation, target, patch: { displayName: name.trim() } }
           : { ...operationFence(snapshot), operation, target },
       );
-      setStatus(result.status);
+      notifyResult(props, operation, result.status === "applied");
+    } catch {
+      notifyResult(props, operation, false);
     } finally {
       setBusy(false);
     }
@@ -47,7 +49,6 @@ export function ChannelConfiguration(props: ChannelPageProps) {
           <input value={name} onChange={event => setName(event.currentTarget.value)} />
         </label>
         <div className="cxc-channel-actions">
-          <span className="cxc-channel-note" role="status">{status}</span>
           {(["connection.enable", "connection.disable", "connection.reconnect"] as const).map(operation => (
             <Button
               key={operation}

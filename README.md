@@ -36,3 +36,7 @@ filesystem paths, DOM handles, or transport callbacks.
 The package remains private at version `0.1.0` to prevent accidental
 publication before the Host-stamped service configuration revision and final
 consumer removal are complete.
+
+## Notification feedback
+
+See [operation notifications and candidate SDK setup](./.agents/docs/notifications.md).
