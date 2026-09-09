@@ -39,4 +39,4 @@ consumer removal are complete.
 
 ## Notification feedback
 
-See [operation notifications and candidate SDK setup](./.agents/docs/notifications.md).
+See [operation notifications and development dependencies](./.agents/docs/notifications.md).
