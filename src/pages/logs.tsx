@@ -1,3 +1,4 @@
+import { notifyResult } from "../notifications.js";
 import type { ChannelManagerLogEntryV2 } from "@cordisx/protocol/channel-manager/v2";
 import { Button, EmptyState } from "cordisx/ui";
 import { useEffect, useState } from "cordisx/react";
@@ -11,20 +12,23 @@ export function ChannelLogs(props: ChannelPageProps) {
   const account = accountByToken(snapshot, routeToken(props.params.connectionToken));
   const [entries, setEntries] = useState<readonly ChannelManagerLogEntryV2[]>([]);
   const [cursor, setCursor] = useState<string>();
-  const [status, setStatus] = useState("");
   const canQuery = canQueryLogs(account);
   const canExport = canExportLogs(account);
 
   const load = async (next?: string, append = false) => {
     if (account === undefined || !canQuery) return;
-    const page = await manager.queryLogs({
-      ...operationFence(snapshot),
-      operation: "logs.query",
-      target: { kind: "log", connectionToken: account.connectionToken },
-      query: { limit: 25, ...(next === undefined ? {} : { cursor: next }) },
-    });
-    setEntries(current => append ? [...current, ...page.entries] : page.entries);
-    setCursor(page.nextCursor);
+    try {
+      const page = await manager.queryLogs({
+        ...operationFence(snapshot),
+        operation: "logs.query",
+        target: { kind: "log", connectionToken: account.connectionToken },
+        query: { limit: 25, ...(next === undefined ? {} : { cursor: next }) },
+      });
+      setEntries(current => append ? [...current, ...page.entries] : page.entries);
+      setCursor(page.nextCursor);
+    } catch {
+      notifyResult(props, "logs.query", false);
+    }
   };
 
   useEffect(() => {
@@ -40,13 +44,17 @@ export function ChannelLogs(props: ChannelPageProps) {
   }
 
   const exportLogs = async () => {
-    const result = await manager.exportLogs({
-      ...operationFence(snapshot),
-      operation: "logs.export",
-      target: { kind: "log", connectionToken: account.connectionToken },
-      query: { limit: 1000 },
-    });
-    setStatus(result.status === "created" ? `${result.status}: ${result.entryCount}` : result.status);
+    try {
+      const result = await manager.exportLogs({
+        ...operationFence(snapshot),
+        operation: "logs.export",
+        target: { kind: "log", connectionToken: account.connectionToken },
+        query: { limit: 1000 },
+      });
+      notifyResult(props, "logs.export", result.status === "created");
+    } catch {
+      notifyResult(props, "logs.export", false);
+    }
   };
 
   return (
@@ -56,7 +64,6 @@ export function ChannelLogs(props: ChannelPageProps) {
           <Button disabled={!canQuery} onClick={() => void load()}>{copy(props.locale, "logs")}</Button>
           <Button disabled={!canExport} onClick={() => void exportLogs()}>{copy(props.locale, "export")}</Button>
         </div>
-        <span className="cxc-channel-note" role="status">{status}</span>
         {entries.length === 0
           ? <EmptyState title={copy(props.locale, "logs.empty")} />
           : (

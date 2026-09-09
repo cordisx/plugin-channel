@@ -17,7 +17,7 @@ import { defineReactPage } from "cordisx/react";
 import { createChannelPage } from "./page.js";
 
 export const name = "channel";
-export const inject = ["i18n", "slots", "pages", "routes", "managerContent", "channelManager"];
+export const inject = ["i18n", "slots", "pages", "routes", "managerContent", "channelManager", "notifications"];
 
 export const manifest = {
   $schema: CORDISX_PLUGIN_MANIFEST_SCHEMA_V8,
@@ -202,7 +202,7 @@ export function apply(ctx: Context): void {
   });
 
   const manager = managerFor(ctx);
-  const mount = defineReactPage<Messages>(createChannelPage(manager));
+  const mount = defineReactPage<Messages>(createChannelPage(manager, ctx.notifications));
   for (const metadata of pages.map(page)) ctx.pages.register<Messages>(metadata, mount);
   for (const definition of routes.map(route)) ctx.routes.register(definition);
 

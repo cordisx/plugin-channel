@@ -1,4 +1,6 @@
 export type CopyKey =
+  | "operation.saved"
+  | "operation.failed"
   | "accounts"
   | "accounts.empty"
   | "create"
@@ -25,6 +27,8 @@ export type CopyKey =
   | "status.state";
 
 const EN: Record<CopyKey, string> = {
+  "operation.saved": "Operation completed.",
+  "operation.failed": "Operation failed. Check the connection and try again.",
   accounts: "Channel accounts",
   "accounts.empty": "No channel accounts are available.",
   create: "New channel",
@@ -52,6 +56,8 @@ const EN: Record<CopyKey, string> = {
 };
 
 const ZH: Record<CopyKey, string> = {
+  "operation.saved": "操作已完成",
+  "operation.failed": "操作未完成，请检查连接后重试",
   accounts: "渠道账号",
   "accounts.empty": "暂无可用渠道账号。",
   create: "新建渠道",
