@@ -20,3 +20,18 @@ See the [Host notification guide](https://github.com/cordisx/cordisx/blob/3cfe37
 for the interaction contract and older-Host capability boundary.
 
 Dependency setup: [notification migration](./.agents/docs/notifications.md).
+
+## Development and release
+
+- Requires Node.js 22 or newer. Install dependencies with `npm ci`.
+- Run `npm run check`, `npm pack --dry-run`, and `git diff --check` before a
+  release checkpoint. The package check verifies descriptor and runtime output.
+- Keep public READMEs focused on installation and use. Migration history,
+  architecture, source layout, local development, tests, and release operations
+  belong here or in indexed maintainer documentation.
+- Releases use a GitHub prerelease, not npm. Build the exact merged main commit,
+  package with `npm pack`, attach the archive with `SHA256SUMS`, then download
+  and verify both assets. The archive must contain `cordisx-package.json`, its
+  referenced runtime manifest, and the browser and service bundle entries.
+- Marketplace artifact URLs and digests are updated separately by the catalog
+  owner after verification. Do not copy older trust records.

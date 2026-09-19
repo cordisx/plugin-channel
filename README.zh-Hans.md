@@ -1,32 +1,64 @@
-# CordisX 渠道插件
+# CordisX Channel
 
-此公开仓库是 CordisX Channel 管理插件的 owner。仓库保留了原 Host 内置目录截至
-Host 提交 `1cbe9d0ff1a803b1486bb2ddcbedc98a187d4f11` 的筛选 Git 作者历史。
-仓库继续采用该来源历史的 AGPL-3.0-or-later 许可证。
+Channel 提供 CordisX 内的渠道账号、运行状态、日志和 Session binding 管理界面。
+本版本包含本地 Simulator adapter；真实渠道的凭据和 transport 继续由 Host 负责。
 
-## 当前检查点
+## 安装
 
-仓库现在已经构建出可执行插件候选。原内置实现依赖 Host 私有 renderer、
-service-config、凭据与 Channel Manager 模块。这些文件只保留在 Git 历史中，已经
-从公开源码树删除。
+插件 ID：`channel`。当前版本：`0.1.1`。
 
-候选已消费正式 Protocol Channel Manager v2 类型
-`3f0dbcd8b04ae83c920d2d913ac2c313af5f83f1`，以及正式 Host provider
-`dfb071e02eca0ef52f84d67b2393c25aced7d3f0`。
+CordisX Community Marketplace feed 必须先完成配置并启用，`--source` 才能选择它：
 
-具体边界与交付顺序见 [MIGRATION.md](MIGRATION.md)。
+```sh
+FEED_URL=https://raw.githubusercontent.com/cordisx/marketplace/main/marketplace.json
+npx cordisx@beta source add "$FEED_URL" --yes
+npx cordisx@beta plugin install channel --source "$FEED_URL" --version 0.1.1
+```
 
-## 所有权
+若该 feed 已启用，可跳过 `source add`。使用其他 profile 时，两条命令都要添加
+相同的 `--profile <profile>`。`--yes` 只确认来源变更，不会批准插件权限；发现来源
+也不等同于 trust root。
 
-本插件负责本地化 Channel route、页面 body 表现、view model、唯一 page factory
-与 lifecycle、`src/channel.css`，以及通过公共 `ctx.channel` 加载的 Simulator
-adapter definition。
+Marketplace 条目列出 `0.1.1` artifact 后，安装命令才可用。在此之前，可从
+[GitHub Release](https://github.com/cordisx/plugin-channel/releases/tag/v0.1.1)
+下载压缩包与 `SHA256SUMS`。
 
-CordisX Host 继续负责 Manager chrome 与历史、凭据捕获、下载处理、语义 UI
-primitive、无障碍策略、原生集成、唯一 Channel runtime、含凭据 adapter transport
-与 adapter 发布权。插件不会导入
-Host 私有文件，也不会携带凭据、原始账号标识、文件系统路径、DOM handle 或
-transport callback。
+## 使用
 
-package 保持 `0.1.0` 且 `private: true`，防止 Host-stamped service configuration
-revision 与最终 consumer 删除完成前被误发布。
+在 CordisX 中打开 Channel Manager 查看可用账号。进入账号后，可以检查配置、运行
+计数、日志和 Session binding，并且只执行 Host 为该账号开放的操作。
+
+内置 Simulator connection 使用固定的本地目标 `simulator/local/test`。创建 Feishu
+或 Lark connection 时仍会进入 Host 管理的凭据捕获流程；插件不会保存渠道凭据，也
+不实现这些渠道的 transport。
+
+## 配置
+
+Channel service 在插件重启时读取 Host 提供的
+`cordisx.channel-service-config/v1` 配置。请通过 CordisX 配置 connection。插件只会
+注册已启用且符合声明 scope 的 Simulator definition；配置格式错误或 revision 无效
+时会 fail closed。
+
+## 权限与限制
+
+账号读取权限是必需的。连接、接收、订阅、发送、binding 读写和附件读取均为独立的
+可选权限。包内 Simulator scope 仅覆盖本地测试 tenant 和 direct test conversation。
+启用前请检查插件请求的权限。
+
+凭据、原生集成、下载、无障碍、导航历史和 Channel runtime 均由 Host 负责。不支持
+或不可用的操作会保持禁用，不会回退到私有 API。
+
+## 排错
+
+- **找不到 `0.1.1`：**确认 Marketplace 条目已列出 release artifact；`--source`
+  不会添加或修复 feed。
+- **没有账号：**检查账号读取权限和已启用的 Host Channel service 配置。
+- **操作按钮不可用：**Host 未为当前账号开放该操作，或对应权限尚未启用。
+- **Simulator 不可用：**确认 adapter、account 和 tenant 分别为 `simulator`、`local`
+  和 `test`。
+
+## 许可证
+
+Channel 使用 [AGPL-3.0-or-later](LICENSE)。第三方声明见
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。维护者环境、检查和发布步骤见
+[AGENTS.md](AGENTS.md)。
