@@ -9,6 +9,7 @@
   "types": "./dist/channel.d.ts",
   "files": [
     "dist",
+    "assets/channel.png",
     "cordisx-package.json",
     "runtime-manifest.json",
     "README.md",
@@ -32,8 +33,9 @@
     "lint": "npm run lint:source && npm run lint:styles",
     "format": "dprint fmt",
     "format:check": "dprint check",
-    "check": "node --check src/service.mjs && npm run format:check && npm run lint && npm run typecheck && npm test",
-    "prepare": "npm run build"
+    "check": "node --check src/service.mjs && npm run format:check && npm run lint && npm run typecheck && npm test && npm run check:package",
+    "prepare": "npm run build",
+    "check:package": "node scripts/check-package.mjs"
   },
   "engines": {
     "node": ">=22.19"

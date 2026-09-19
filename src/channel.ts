@@ -16,6 +16,8 @@ import {
 import { defineReactPage } from "cordisx/react";
 import { createChannelPage } from "./page.js";
 
+export { icon } from "./brand-icon.js";
+
 export const name = "channel";
 export const inject = ["i18n", "slots", "pages", "routes", "managerContent", "channelManager", "notifications"];
 

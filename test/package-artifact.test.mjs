@@ -51,3 +51,17 @@ test("keeps source, runtime manifest, and bundled module identity aligned", asyn
   await readFile(new URL(`..${packageManifest.entry.slice(1)}`, import.meta.url));
   await readFile(new URL(`..${declared.services[0].entry.slice(1)}`, import.meta.url));
 });
+
+test("ships the selected brand PNG unchanged through the public module icon", async () => {
+  const image = await readFile(new URL("../assets/channel.png", import.meta.url));
+  const { icon } = await import("../dist/channel.js");
+  assert.equal(icon.mediaType, "image/png");
+  assert.ok(icon.data.length <= 400_000);
+  assert.deepEqual(Buffer.from(icon.data, "base64"), image);
+  assert.equal(image.readUInt32BE(16), 256);
+  assert.equal(image.readUInt32BE(20), 256);
+  assert.equal(
+    createHash("sha256").update(image).digest("hex"),
+    "8a989a7a2c83d66d4b10381e77bf596222f8301980518a86b4fbbcad006c1e0d",
+  );
+});

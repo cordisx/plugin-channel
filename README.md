@@ -37,6 +37,19 @@ The package remains private at version `0.1.0` to prevent accidental
 publication before the Host-stamped service configuration revision and final
 consumer removal are complete.
 
+## Plugin brand artwork
+
+The selected 256×256 PNG is owned at `assets/channel.png` and included in the
+package file allowlist. `src/brand-icon.ts` embeds the same bytes in the public
+module `icon` export (`CordisXPluginBrandIcon` from `cordisx/contracts`), which
+Host validates and renders in its plugin list. This does not replace semantic
+menu or action icons. Run `node scripts/generate-brand-icon.mjs` after an
+approved artwork replacement; the package tests verify the bundled icon bytes.
+
+Artwork ships through this repository's source distribution on `main`.
+The package remains private at `0.1.0`; this change does not publish an npm
+release or introduce a separate artifact release channel.
+
 ## Notification feedback
 
 See [operation notifications and development dependencies](./.agents/docs/notifications.md).
