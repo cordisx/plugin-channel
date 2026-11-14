@@ -5,6 +5,7 @@ import type {
   ChannelManagerV2,
 } from "@cordisx/protocol/channel-manager/v2";
 import { useMemo, useSyncExternalStore } from "cordisx/react";
+import { copy } from "./locales.js";
 
 export interface ChannelPageModel {
   readonly manager: ChannelManagerV2;
@@ -180,13 +181,5 @@ export function bindingsForAccount(
 }
 
 export function stateLabel(locale: string, state: ChannelManagerAccountV3["connectionState"]): string {
-  const labels: Record<ChannelManagerAccountV3["connectionState"], readonly [string, string]> = {
-    disabled: ["Disabled", "已停用"],
-    starting: ["Starting", "启动中"],
-    ready: ["Connected", "已连接"],
-    retrying: ["Retrying", "重试中"],
-    unavailable: ["Unavailable", "不可用"],
-    stopped: ["Stopped", "已停止"],
-  };
-  return labels[state][locale.startsWith("zh") ? 1 : 0];
+  return copy(locale, `state.${state}`);
 }

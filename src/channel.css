@@ -7,86 +7,6 @@
   color: var(--cx-text);
 }
 
-.cxc-channel-results {
-  min-width: 0;
-  min-height: 0;
-  flex: 1;
-  overflow: auto;
-  overscroll-behavior: contain;
-  scrollbar-gutter: stable;
-}
-
-.cxc-channel-list {
-  display: grid;
-  align-content: start;
-  gap: 4px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.cxc-channel-account {
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
-  box-sizing: border-box;
-  width: 100%;
-  padding: 9px 10px;
-  border: 1px solid transparent;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--cx-text);
-  font: inherit;
-  text-align: start;
-  cursor: pointer;
-}
-
-.cxc-channel-account:hover {
-  background: var(--cx-hover);
-}
-
-.cxc-channel-account:focus-visible {
-  outline: 2px solid var(--cx-primary);
-  outline-offset: -2px;
-  background: var(--cx-hover);
-}
-
-.cxc-channel-avatar {
-  display: grid;
-  width: 32px;
-  height: 32px;
-  place-items: center;
-  border-radius: 8px;
-  background: var(--cx-hover);
-  color: var(--cx-muted);
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-
-.cxc-channel-account-copy {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-.cxc-channel-account-copy strong, .cxc-channel-account-copy span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.cxc-channel-account-copy strong {
-  font-size: 13px;
-  font-weight: 600;
-}
-
-.cxc-channel-meta {
-  color: var(--cx-muted);
-  font-size: 12px;
-}
-
 .cxc-channel-form {
   display: grid;
   align-content: start;
@@ -154,17 +74,6 @@
 }
 
 @media (width <= 700px) {
-  .cxc-channel-account {
-    grid-template-columns: 28px minmax(0, 1fr) auto;
-    gap: 8px;
-    padding: 8px 6px;
-  }
-
-  .cxc-channel-avatar {
-    width: 28px;
-    height: 28px;
-  }
-
   .cxc-channel-log-entry {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 4px 8px;

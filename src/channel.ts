@@ -5,6 +5,7 @@ import {
   CORDISX_PAGE_SCHEMA_V4,
   CORDISX_PLUGIN_MANIFEST_SCHEMA_V8,
   CORDISX_ROUTE_SCHEMA_V2,
+  CORDISX_SURFACE_CONTRIBUTION_SCHEMA_V11,
   type CordisXLocalizedText,
   type CordisXManagerContentNavigationDeclarationV1,
   type CordisXMessageParams,
@@ -15,11 +16,22 @@ import {
 } from "cordisx/contracts";
 import { defineReactPage } from "cordisx/react";
 import { createChannelPage } from "./page.js";
+import { type ChannelCopyMessages, channelLocales } from "./locales.js";
+import { availablePlatforms } from "./model.js";
 
 export { icon } from "./brand-icon.js";
 
 export const name = "channel";
-export const inject = ["i18n", "slots", "pages", "routes", "managerContent", "channelManager", "notifications"];
+export const inject = [
+  "i18n",
+  "slots",
+  "pages",
+  "routes",
+  "commands",
+  "managerContent",
+  "channelManager",
+  "notifications",
+];
 
 export const manifest = {
   $schema: CORDISX_PLUGIN_MANIFEST_SCHEMA_V8,
@@ -89,7 +101,7 @@ export const manifest = {
   }],
 } as const satisfies CordisXPluginManifestV8;
 
-interface Messages {
+interface Messages extends ChannelCopyMessages {
   "plugin.name": undefined;
   "plugin.description": undefined;
   "route.settings": undefined;
@@ -103,6 +115,7 @@ interface Messages {
   "platform.feishu": undefined;
   "platform.lark": undefined;
   "platform.simulator": undefined;
+  "collection.summary": { platform: string; state: string };
 }
 
 function message<Key extends keyof Messages>(
@@ -135,7 +148,7 @@ const routes = [
   ["sessions", "/manager/extensions/channels/:connectionToken/sessions", "sessions", "route.sessions"],
 ] as const;
 
-function page([id, title, icon]: typeof pages[number]): CordisXPageMetadataV4 {
+function page([id, title, icon]: typeof pages[number], canCreate = false): CordisXPageMetadataV4 {
   return {
     $schema: CORDISX_PAGE_SCHEMA_V4,
     schemaVersion: 4,
@@ -144,6 +157,19 @@ function page([id, title, icon]: typeof pages[number]): CordisXPageMetadataV4 {
     description: message(title),
     icon,
     chrome: "standard",
+    ...(id === "settings"
+      ? {
+        breadcrumbs: [],
+        headerActions: [{
+          id: "create",
+          label: message("route.create"),
+          ariaLabel: message("route.create"),
+          icon: "host:new" as const,
+          command: { id: "open-create" },
+          disabled: { value: !canCreate, ...(!canCreate ? { reason: message("create.unavailable") } : {}) },
+        }],
+      }
+      : {}),
   };
 }
 
@@ -184,6 +210,7 @@ export function apply(ctx: Context): void {
     locale: "en",
     default: true,
     messages: {
+      ...channelLocales.en,
       "plugin.name": "Channels",
       "plugin.description": "Manage Channel connections and sessions.",
       "route.settings": "Channels",
@@ -203,6 +230,7 @@ export function apply(ctx: Context): void {
     namespace: "channel",
     locale: "zh-CN",
     messages: {
+      ...channelLocales["zh-CN"],
       "plugin.name": "渠道",
       "plugin.description": "管理渠道连接与会话。",
       "route.settings": "渠道",
@@ -221,13 +249,25 @@ export function apply(ctx: Context): void {
 
   const manager = managerFor(ctx);
   const mount = defineReactPage<Messages>(createChannelPage(manager, ctx.notifications));
-  for (const metadata of pages.map(page)) ctx.pages.register<Messages>(metadata, mount);
+  for (const tuple of pages.filter(([id]) => id !== "settings")) ctx.pages.register<Messages>(page(tuple), mount);
   for (const definition of routes.map(route)) ctx.routes.register(definition);
+  ctx.commands.register({ id: "open-create", title: message("route.create") }, async ({ signal }) => {
+    if (signal.aborted || availablePlatforms(manager.snapshot()).length === 0) return;
+    await ctx.routes.navigate({ id: "create" });
+  });
 
   ctx.effect(() => {
     let disposeProjection: Disposable<void | Promise<void>> = () => {};
+    let disposeListPage: Disposable<void | Promise<void>> = () => {};
+    let listCanCreate: boolean | undefined;
     const refresh = () => {
       const snapshot = manager.snapshot();
+      const canCreate = availablePlatforms(snapshot).length > 0;
+      if (listCanCreate !== canCreate) {
+        void disposeListPage();
+        disposeListPage = ctx.pages.register<Messages>(page(pages[0], canCreate), mount);
+        listCanCreate = canCreate;
+      }
       const declarations: CordisXManagerContentNavigationDeclarationV1[] = [{
         $schema: CORDISX_MANAGER_CONTENT_NAVIGATION_SCHEMA_V1,
         schemaVersion: 1,
@@ -274,13 +314,16 @@ export function apply(ctx: Context): void {
     return () => {
       subscription.dispose();
       void disposeProjection();
+      void disposeListPage();
     };
   }, "channel: manager content navigation projection");
 
   ctx.slots.register({
+    $schema: CORDISX_SURFACE_CONTRIBUTION_SCHEMA_V11,
+    schemaVersion: 11,
     name: "manager.settings.navigation-items",
     id: "channels",
     group: "after-settings",
     order: 180,
-  }, { route: { id: "settings" } });
+  }, { route: { id: "settings" }, navigationGroup: { id: "external-accounts" } });
 }
