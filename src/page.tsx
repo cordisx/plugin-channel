@@ -14,7 +14,9 @@ export function createChannelPage(manager: ChannelManagerV2, notifications: Noti
     if (props.routeId.endsWith(":create")) return <ChannelCreate {...shared} />;
     if (props.routeId.endsWith(":runtime")) return <ChannelRuntime {...shared} />;
     if (props.routeId.endsWith(":logs")) return <ChannelLogs {...shared} />;
-    if (props.routeId.endsWith(":sessions")) return <ChannelSessions {...shared} />;
+    if (props.routeId.endsWith(":sessions")) {
+      return <ChannelSessions key={String(props.params.connectionToken)} {...shared} />;
+    }
     return <ChannelConfiguration {...shared} />;
   };
 }

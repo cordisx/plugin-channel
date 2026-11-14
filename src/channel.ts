@@ -2,13 +2,13 @@ import type { Context, Disposable } from "@deepseek-ai/cordis";
 import type { ChannelManagerV2 } from "@cordisx/protocol/channel-manager/v2";
 import {
   CORDISX_MANAGER_CONTENT_NAVIGATION_SCHEMA_V1,
-  CORDISX_PAGE_SCHEMA_V3,
+  CORDISX_PAGE_SCHEMA_V4,
   CORDISX_PLUGIN_MANIFEST_SCHEMA_V8,
   CORDISX_ROUTE_SCHEMA_V2,
   type CordisXLocalizedText,
   type CordisXManagerContentNavigationDeclarationV1,
   type CordisXMessageParams,
-  type CordisXPageMetadataV3,
+  type CordisXPageMetadataV4,
   type CordisXPluginManifestV8,
   type CordisXPluginPresentation,
   type CordisXRouteDefinitionV2,
@@ -100,6 +100,9 @@ interface Messages {
   "route.sessions": undefined;
   "record.fallback": undefined;
   "record.title": { name: string };
+  "platform.feishu": undefined;
+  "platform.lark": undefined;
+  "platform.simulator": undefined;
 }
 
 function message<Key extends keyof Messages>(
@@ -121,7 +124,7 @@ const pages = [
   ["logs", "route.logs", "host:history"],
   ["runtime", "route.runtime", "host:open"],
   ["sessions", "route.sessions", "host:layers"],
-] as const satisfies readonly (readonly [string, keyof Messages, CordisXPageMetadataV3["icon"]])[];
+] as const satisfies readonly (readonly [string, keyof Messages, CordisXPageMetadataV4["icon"]])[];
 
 const routes = [
   ["settings", "/manager/extensions/channels", "settings", "route.settings"],
@@ -132,10 +135,10 @@ const routes = [
   ["sessions", "/manager/extensions/channels/:connectionToken/sessions", "sessions", "route.sessions"],
 ] as const;
 
-function page([id, title, icon]: typeof pages[number]): CordisXPageMetadataV3 {
+function page([id, title, icon]: typeof pages[number]): CordisXPageMetadataV4 {
   return {
-    $schema: CORDISX_PAGE_SCHEMA_V3,
-    schemaVersion: 3,
+    $schema: CORDISX_PAGE_SCHEMA_V4,
+    schemaVersion: 4,
     id,
     title: message(title),
     description: message(title),
@@ -163,6 +166,13 @@ function declarationId(prefix: string, token: string): string {
   return `${prefix}-${hash.toString(36)}`;
 }
 
+function platformTitle(kind: string): CordisXLocalizedText {
+  if (kind === "feishu") return message("platform.feishu");
+  if (kind === "lark") return message("platform.lark");
+  if (kind === "simulator") return message("platform.simulator");
+  return message("record.title", { name: kind });
+}
+
 function managerFor(ctx: Context): ChannelManagerV2 {
   return ctx.channelManager;
 }
@@ -184,6 +194,9 @@ export function apply(ctx: Context): void {
       "route.sessions": "Connections & sessions",
       "record.fallback": "Channel",
       "record.title": "{name}",
+      "platform.feishu": "Feishu",
+      "platform.lark": "Lark",
+      "platform.simulator": "Simulator",
     },
   });
   ctx.i18n.define<Messages>({
@@ -200,6 +213,9 @@ export function apply(ctx: Context): void {
       "route.sessions": "连接与会话",
       "record.fallback": "渠道",
       "record.title": "{name}",
+      "platform.feishu": "飞书",
+      "platform.lark": "Lark",
+      "platform.simulator": "模拟器",
     },
   });
 
@@ -228,7 +244,9 @@ export function apply(ctx: Context): void {
       }];
       const recordTitles = snapshot.accounts.map(account => ({
         id: account.connectionToken,
-        title: message("record.title", { name: account.displayName ?? account.adapterKind }),
+        title: account.displayName === undefined
+          ? platformTitle(account.adapterKind)
+          : message("record.title", { name: account.displayName }),
       }));
       for (const account of snapshot.accounts) {
         const tabs = (["configuration", "runtime", "logs", "sessions"] as const).map(id => ({

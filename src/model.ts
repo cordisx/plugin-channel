@@ -153,6 +153,10 @@ export function canCreateConnection(
   );
 }
 
+export function availablePlatforms(snapshot: ChannelManagerSnapshotV3): readonly ("simulator" | "feishu" | "lark")[] {
+  return (["feishu", "lark", "simulator"] as const).filter(platform => canCreateConnection(snapshot, platform));
+}
+
 export function canQueryLogs(account: ChannelManagerAccountV3 | undefined): boolean {
   return account?.availableOperations.includes("logs.query") ?? false;
 }

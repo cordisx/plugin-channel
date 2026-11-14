@@ -1,28 +1,38 @@
 import { notifyResult } from "../notifications.js";
-import { type FormEvent, useState } from "cordisx/react";
-import { Button, Icon, Stack, Text } from "cordisx/ui";
+import { type FormEvent, useMemo, useState } from "cordisx/react";
+import { Button, EmptyState, SchemaForm } from "cordisx/ui";
 import type { ChannelPageProps } from "../page-types.js";
 import { copy } from "../locales.js";
-import { canCreateConnection, createChannelConnection, useChannelModel } from "../model.js";
+import { availablePlatforms, canCreateConnection, createChannelConnection, useChannelModel } from "../model.js";
+import { type ChannelPlatform, createSchema } from "../forms.js";
 import { ChannelShell } from "../shell.js";
 
 export function ChannelCreate(props: ChannelPageProps) {
   const { manager, snapshot } = useChannelModel(props.manager);
-  const [platform, setPlatform] = useState<"simulator" | "feishu" | "lark">("simulator");
-  const [name, setName] = useState("");
-  const [selectors, setSelectors] = useState<readonly ("direct" | "group")[]>(["direct"]);
+  const platforms = availablePlatforms(snapshot);
+  const simulator = platforms.includes("simulator");
+  const credentialed = platforms.includes("feishu");
+  const schema = useMemo(() => createSchema(props.locale, platforms), [props.locale, simulator, credentialed]);
+  const [draft, setDraft] = useState<Record<string, unknown>>({
+    platform: platforms[0] ?? "simulator",
+    displayName: "",
+    groups: false,
+  });
+  const [valid, setValid] = useState(false);
   const [busy, setBusy] = useState(false);
-  const available = canCreateConnection(snapshot, platform);
+  const name = typeof draft.displayName === "string" ? draft.displayName.trim() : "";
+  const platform = draft.platform as ChannelPlatform;
+  const available = platforms.includes(platform) && canCreateConnection(snapshot, platform);
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!available || name.trim() === "") return;
+    if (busy || !valid || !available || name === "") return;
     setBusy(true);
     try {
       const result = await createChannelConnection(manager, snapshot, {
         platform,
-        displayName: name.trim(),
-        selectors,
+        displayName: name,
+        selectors: draft.groups === true ? ["direct", "group"] : ["direct"],
       });
       if (result === "applied") {
         await props.navigation.navigate({ id: "settings" });
@@ -36,37 +46,33 @@ export function ChannelCreate(props: ChannelPageProps) {
 
   return (
     <ChannelShell status={available ? "implemented" : "unavailable"}>
-      <form className="cxc-channel-form" data-channel-page="create" onSubmit={event => void submit(event)}>
-        <Stack gap="medium">
-          <Text tone="muted">{copy(props.locale, "create.description")}</Text>
-          <label className="cxc-channel-field-control">
-            <span className="cxc-channel-field-title">{copy(props.locale, "create.platform")}</span>
-            <select value={platform} onChange={event => setPlatform(event.currentTarget.value as typeof platform)}>
-              <option value="simulator">Simulator</option>
-              <option value="feishu">Feishu</option>
-              <option value="lark">Lark</option>
-            </select>
-          </label>
-          <label className="cxc-channel-field-control">
-            <span className="cxc-channel-field-title">{copy(props.locale, "create.name")}</span>
-            <input required value={name} onChange={event => setName(event.currentTarget.value)} />
-          </label>
-          <label className="cxc-channel-switch">
-            <input
-              type="checkbox"
-              checked={selectors.includes("group")}
-              onChange={event => setSelectors(event.currentTarget.checked ? ["direct", "group"] : ["direct"])}
+      {platforms.length === 0
+        ? <EmptyState title={copy(props.locale, "create.unavailable")} />
+        : (
+          <form className="cxc-channel-form" data-channel-page="create" onSubmit={event => void submit(event)}>
+            <SchemaForm
+              identity="channel-create"
+              schema={schema}
+              value={draft}
+              locale={props.locale}
+              disabled={busy}
+              onChange={next => {
+                setDraft({ ...next.value });
+                setValid(next.valid);
+              }}
+              onValidationChange={next => setValid(next.valid)}
             />
-            {copy(props.locale, "create.groups")}
-          </label>
-        </Stack>
-        <div className="cxc-channel-actions">
-          <Button variant="primary" type="submit" disabled={busy || !available || name.trim() === ""}>
-            <Icon name="success" />
-            {copy(props.locale, "create.save")}
-          </Button>
-        </div>
-      </form>
+            <div className="cxc-channel-actions">
+              <Button
+                variant="primary"
+                type="submit"
+                disabled={busy || !valid || !available || name === ""}
+              >
+                {copy(props.locale, "create.save")}
+              </Button>
+            </div>
+          </form>
+        )}
     </ChannelShell>
   );
 }

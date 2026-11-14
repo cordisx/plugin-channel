@@ -1,0 +1,52 @@
+import Schema from "@deepseek-ai/schemastery";
+import type { SchemaFormSourceV1, SchemaFormValidationV1 } from "@cordisx/protocol/schema-form/v1";
+import { copy } from "./locales.js";
+import { platformLabel } from "./presentation.js";
+
+export type ChannelPlatform = "simulator" | "feishu" | "lark";
+
+/** Normalize optional Standard Schema issue paths for the strict public form contract. */
+function hostSchema(schema: Schema): SchemaFormSourceV1 {
+  const validation = schema["~standard"];
+  const normalize = (result: Awaited<ReturnType<typeof validation.validate>>): SchemaFormValidationV1 =>
+    result.issues
+      ? {
+        issues: result.issues.map(issue => ({
+          message: issue.message,
+          ...(issue.path === undefined ? {} : { path: issue.path }),
+        })),
+      }
+      : { value: result.value };
+  return {
+    ...schema,
+    "~standard": {
+      version: 1,
+      vendor: "schemastery",
+      validate: input => {
+        const result = validation.validate(input);
+        return result instanceof Promise ? result.then(normalize) : normalize(result);
+      },
+    },
+  };
+}
+
+function displayName(locale: string) {
+  return Schema.string().required().pattern(/\S/u)
+    .extra("extra", { label: copy(locale, "create.name") });
+}
+
+export function configurationSchema(locale: string) {
+  return hostSchema(Schema.object({ displayName: displayName(locale) }));
+}
+
+export function createSchema(locale: string, platforms: readonly ChannelPlatform[]) {
+  return hostSchema(Schema.object({
+    platform: Schema.union(
+      platforms.map(platform => Schema.const(platform).extra("extra", { label: platformLabel(locale, platform) })),
+    ).required().extra("extra", { label: copy(locale, "create.platform") }),
+    displayName: displayName(locale),
+    groups: Schema.boolean().default(false).role("switch")
+      .extra("extra", { label: copy(locale, "create.groups") })
+      .description(copy(locale, "create.groups.help")),
+  }));
+}
