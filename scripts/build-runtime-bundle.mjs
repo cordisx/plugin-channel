@@ -7,6 +7,8 @@ await build({
   external: [
     "@deepseek-ai/cordis",
     "@cordisx/protocol/channel-manager/v2",
+    "@cordisx/protocol/channel-manager/v3",
+    "@cordisx/protocol/manager-collection/v2",
     "cordisx/contracts",
     "cordisx/react",
     "cordisx/react/jsx-runtime",

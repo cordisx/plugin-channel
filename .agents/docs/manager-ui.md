@@ -25,8 +25,22 @@ collection handle and its Channel subscription. A failed registration also
 disposes its source. An older Host without `managerCollection` gets an honest
 unavailable state rather than a private renderer fallback.
 
+On a Host advertising `managerCollection.registerV2`, the source supplies the
+generic identity visual: the bundled platform icon, or authenticated account
+artwork with the platform icon in its lower-right corner. It reads account
+artwork and the bot name only from public `channelManager.snapshotWithIdentity`.
+The optional user connection label takes precedence over the bot name. A mounted
+list performs a bounded read-only identity refresh and releases its timer and
+request on disposal; it never logs in, reconnects, or reads an avatar URL.
+Older Hosts continue to get the frozen v1 semantic icon source.
+
+The shared Host owns all image geometry, clipping, contrast and image failure
+fallback. Feishu and Lark use the existing bundled platform artwork. Unsupported
+platform artwork retains an honest semantic icon; no account avatar is invented.
+
 Public references:
 
 - [Host Manager navigation](https://github.com/cordisx/cordisx/blob/main/.agents/docs/manager-settings-navigation.md)
 - [Protocol navigation groups v2](https://github.com/cordisx/cordisx-protocol/blob/main/.agents/docs/manager-settings-navigation/groups-v2.md)
 - [Protocol Manager collection v1](https://github.com/cordisx/cordisx-protocol/blob/main/.agents/docs/manager-collection/README.md)
+- [Protocol identity visuals v2](https://github.com/cordisx/cordisx-protocol/blob/main/.agents/docs/manager-collection/v2.md)

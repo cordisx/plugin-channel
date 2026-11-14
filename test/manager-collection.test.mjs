@@ -197,3 +197,70 @@ test("rejects aborted, mismatched, and oversized queries without truncating conn
     source.dispose();
   }
 });
+
+test("uses public account artwork and platform badges only through the explicit identity snapshot", () => {
+  const fixture = managerFixture([
+    {
+      ...accounts[0],
+      displayName: undefined,
+      accountName: "Support bot",
+      accountAvatar: { marker: "public-bounded-image" },
+    },
+    { ...accounts[1], adapterKind: "lark" },
+    { ...accounts[2], adapterKind: "simulator" },
+  ]);
+  fixture.manager.snapshotWithIdentity = fixture.manager.snapshot;
+  fixture.manager.refreshIdentity = async () => {};
+  const source = new ChannelCollectionSource(fixture.manager, "en");
+  try {
+    const value = source.snapshotWithIdentity(query("all", ""), new AbortController().signal);
+    assert.equal(value.contract, "cordisx.manager-collection-snapshot/v2");
+    assert.equal(value.items[0].title.fallback, "Support bot");
+    assert.deepEqual(value.items[0].leadingVisual.avatar, { marker: "public-bounded-image" });
+    assert.equal(value.items[0].leadingVisual.icon.kind, "raster-image");
+    assert.equal(value.items[1].leadingVisual.icon.kind, "raster-image");
+    assert.equal(value.items[1].leadingVisual.avatar, undefined);
+    assert.equal(value.items[2].leadingVisual.icon, "host:layers");
+    assert.equal(
+      source.snapshot(query(), new AbortController().signal).contract,
+      "cordisx.manager-collection-snapshot/v1",
+    );
+  } finally {
+    source.dispose();
+  }
+});
+
+test("starts one read-only identity refresh on a v2 mount and aborts it on disposal", async () => {
+  const fixture = managerFixture();
+  let signal;
+  let calls = 0;
+  fixture.manager.snapshotWithIdentity = fixture.manager.snapshot;
+  fixture.manager.refreshIdentity = async value => {
+    signal = value;
+    calls += 1;
+  };
+  let registered;
+  const cleanup = registerChannelCollection(
+    {
+      register() {
+        throw new Error("Should select v2");
+      },
+      registerV2(_registration, source) {
+        registered = source;
+        return {
+          dispose() {
+            source.dispose();
+          },
+        };
+      },
+    },
+    fixture.manager,
+    "en",
+  );
+  assert.equal(calls, 1);
+  assert.equal(registered.snapshot(query(), new AbortController().signal).schemaVersion, 2);
+  cleanup();
+  await Promise.resolve();
+  assert.equal(signal.aborted, true);
+  assert.equal(fixture.listenerCount(), 0);
+});
