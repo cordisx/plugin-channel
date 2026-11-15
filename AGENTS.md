@@ -21,6 +21,9 @@ for the interaction contract and older-Host capability boundary.
 
 Dependency setup: [notification migration](./.agents/docs/notifications.md).
 
+Manager page ownership and public collection registration:
+[Channel Manager UI](./.agents/docs/manager-ui.md).
+
 ## Development and release
 
 - Requires Node.js 22 or newer. Install dependencies with `npm ci`.

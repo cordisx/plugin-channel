@@ -12,8 +12,16 @@ try {
   const archive = join(destination, archives[0]);
   const image = execFileSync("tar", ["-xOf", archive, "package/assets/channel.png"]);
   assert.deepEqual(image, await readFile(new URL("../assets/channel.png", import.meta.url)));
+  const platform = execFileSync("tar", ["-xOf", archive, "package/assets/platforms/feishu.png"]);
+  assert.deepEqual(platform, await readFile(new URL("../assets/platforms/feishu.png", import.meta.url)));
   const module = execFileSync("tar", ["-xOf", archive, "package/dist/channel.js"], { encoding: "utf8" });
   assert.equal(module, await readFile(new URL("../dist/channel.js", import.meta.url), "utf8"));
+  for (const file of ["cordisx-documents.json", "docs/usage.md", "docs/commands.md", "docs/troubleshooting.md"]) {
+    assert.equal(
+      execFileSync("tar", ["-xOf", archive, `package/${file}`], { encoding: "utf8" }),
+      await readFile(new URL(`../${file}`, import.meta.url), "utf8"),
+    );
+  }
   console.log("Package contains the exact selected PNG and validated runtime module.");
 } finally {
   await rm(destination, { recursive: true, force: true });

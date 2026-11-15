@@ -1,6 +1,6 @@
 {
   "name": "@cordisx/channel",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "CordisX channel management plugin",
   "license": "AGPL-3.0-or-later",
@@ -10,12 +10,15 @@
   "files": [
     "dist",
     "assets/channel.png",
+    "assets/platforms/feishu.png",
     "cordisx-package.json",
     "runtime-manifest.json",
     "README.md",
     "README.zh-Hans.md",
     "LICENSE",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "cordisx-documents.json",
+    "docs"
   ],
   "exports": {
     ".": {
@@ -33,7 +36,7 @@
     "lint": "npm run lint:source && npm run lint:styles",
     "format": "dprint fmt",
     "format:check": "dprint check",
-    "check": "node --check src/service.mjs && npm run format:check && npm run lint && npm run typecheck && npm test && npm run check:package",
+    "check": "node --check src/service.mjs && node scripts/check-platform-icons.mjs && npm run format:check && npm run lint && npm run typecheck && npm test && npm run check:package",
     "prepare": "npm run build",
     "check:package": "node scripts/check-package.mjs"
   },
@@ -42,9 +45,10 @@
   },
   "devDependencies": {
     "@cordisx/eslint-config": "github:cordisx/cordisxmono#c63c2e8c2ba7e11502934a52ad2ce3734e804cdc",
-    "@cordisx/protocol": "github:cordisx/cordisx-protocol#f46dd21e15a949a26f05f89bf11dea339fc60c02",
+    "@cordisx/protocol": "0.1.0-beta.13",
     "@projectwallace/stylelint-plugin": "0.7.0",
     "@deepseek-ai/cordis": "4.0.1",
+    "@deepseek-ai/schemastery": "3.18.2",
     "@typescript-eslint/parser": "8.69.0",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
@@ -53,7 +57,7 @@
     "stylelint": "17.15.0",
     "stylelint-config-standard": "40.0.0",
     "typescript": "5.9.2",
-    "cordisx": "github:cordisx/cordisx#3cfe370eb7abf33e16686fbd82659cd441247fbd",
+    "cordisx": "0.1.0-beta.63",
     "esbuild": "0.28.2",
     "react": "19.2.8",
     "react-dom": "19.2.8"

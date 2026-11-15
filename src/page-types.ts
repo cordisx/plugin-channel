@@ -5,4 +5,5 @@ export interface ChannelPageProps extends CordisXReactPageProps {
   readonly notifications: NotificationsV1;
   readonly manager: ChannelManagerV2;
   readonly locale: string;
+  readonly summaryAvailable?: boolean;
 }

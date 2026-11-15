@@ -1,0 +1,23 @@
+{
+  "contract": "cordisx.plugin-documents/v1",
+  "documents": [
+    {
+      "id": "usage",
+      "title": "使用指南",
+      "path": "./docs/usage.md",
+      "locale": "zh-Hans"
+    },
+    {
+      "id": "commands",
+      "title": "指令速查",
+      "path": "./docs/commands.md",
+      "locale": "zh-Hans"
+    },
+    {
+      "id": "troubleshooting",
+      "title": "发送排障",
+      "path": "./docs/troubleshooting.md",
+      "locale": "zh-Hans"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
-import { Card, EmptyState, Stack } from "cordisx/ui";
+import { Disclosure, EmptyState, FieldList, Stack, StatusBadge } from "cordisx/ui";
 import { copy } from "../locales.js";
 import { accountByToken, routeToken, stateLabel, useChannelModel } from "../model.js";
+import { configurationLabel, stateTone } from "../presentation.js";
 import type { ChannelPageProps } from "../page-types.js";
 import { ChannelShell } from "../shell.js";
 
@@ -14,23 +15,62 @@ export function ChannelRuntime(props: ChannelPageProps) {
       </ChannelShell>
     );
   }
-  const stats = [
-    [copy(props.locale, "status.state"), stateLabel(props.locale, account.connectionState)],
-    [copy(props.locale, "status.inbound"), String(account.inbound.pending + account.inbound.retrying)],
-    [copy(props.locale, "status.outbound"), String(account.outbound.pending + account.outbound.retrying)],
-    [copy(props.locale, "status.generation"), String(account.generation)],
+  const queueItems = [
+    {
+      id: "inbound",
+      label: copy(props.locale, "status.inbound"),
+      value: account.inbound.pending + account.inbound.retrying,
+    },
+    {
+      id: "outbound",
+      label: copy(props.locale, "status.outbound"),
+      value: account.outbound.pending + account.outbound.retrying,
+    },
+    { id: "inbound-failed", label: copy(props.locale, "status.inbound-failed"), value: account.inbound.deadLetter },
+    { id: "outbound-failed", label: copy(props.locale, "status.outbound-failed"), value: account.outbound.deadLetter },
+  ];
+  const diagnostics = [
+    { id: "generation", label: copy(props.locale, "status.generation"), value: account.generation },
+    { id: "revision", label: copy(props.locale, "status.revision"), value: account.lastGoodRevision },
+    ...(account.cursorUpdatedAt === undefined ? [] : [{
+      id: "cursor",
+      label: copy(props.locale, "status.cursor"),
+      value: new Date(account.cursorUpdatedAt).toLocaleString(props.locale),
+    }]),
+    ...(account.lastErrorCode === undefined ? [] : [{
+      id: "error",
+      label: copy(props.locale, "status.error"),
+      value: account.lastErrorCode,
+    }]),
   ];
   return (
     <ChannelShell status={account.implementationStatus}>
       <Stack gap="medium" data-channel-page="detail" data-channel-detail={account.connectionToken}>
-        <div className="cxc-channel-cards">
-          {stats.map(([label, value]) => (
-            <Card key={label} className="cxc-channel-stat">
-              <strong>{value}</strong>
-              <span>{label}</span>
-            </Card>
-          ))}
-        </div>
+        {props.summaryAvailable ? null : (
+          <FieldList
+            density="compact"
+            items={[
+              {
+                id: "state",
+                label: copy(props.locale, "status.state"),
+                value: (
+                  <StatusBadge tone={stateTone(account.connectionState)}>
+                    {stateLabel(props.locale, account.connectionState)}
+                  </StatusBadge>
+                ),
+              },
+              {
+                id: "configuration",
+                label: copy(props.locale, "status.configuration"),
+                value: configurationLabel(props.locale, account.configurationState),
+              },
+              ...queueItems,
+            ]}
+          />
+        )}
+        <Disclosure summary={copy(props.locale, "diagnostics")}>
+          <FieldList density="compact" items={diagnostics} />
+        </Disclosure>
       </Stack>
     </ChannelShell>
   );

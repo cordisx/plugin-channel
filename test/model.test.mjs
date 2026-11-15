@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import {
   accountByToken,
+  availablePlatforms,
   bindingsForAccount,
   canCreateConnection,
   canExportLogs,
@@ -117,6 +118,15 @@ test("shows only operations advertised by the formal Host provider", () => {
   assert.equal(canCreateConnection(unavailable, "feishu"), false);
   assert.equal(canQueryLogs(unavailable.accounts[0]), true);
   assert.equal(canExportLogs(unavailable.accounts[0]), false);
+  assert.deepEqual(availablePlatforms(unavailable), []);
+  assert.deepEqual(availablePlatforms(snapshot), ["simulator"]);
+  assert.deepEqual(
+    availablePlatforms({
+      ...snapshot,
+      availableOperations: ["target.credential.capture.create"],
+    }),
+    ["feishu", "lark"],
+  );
 });
 test("creates a simulator through issuance and fenced execution", async () => {
   const calls = [];
