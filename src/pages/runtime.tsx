@@ -46,26 +46,28 @@ export function ChannelRuntime(props: ChannelPageProps) {
   return (
     <ChannelShell status={account.implementationStatus}>
       <Stack gap="medium" data-channel-page="detail" data-channel-detail={account.connectionToken}>
-        <FieldList
-          density="compact"
-          items={[
-            {
-              id: "state",
-              label: copy(props.locale, "status.state"),
-              value: (
-                <StatusBadge tone={stateTone(account.connectionState)}>
-                  {stateLabel(props.locale, account.connectionState)}
-                </StatusBadge>
-              ),
-            },
-            {
-              id: "configuration",
-              label: copy(props.locale, "status.configuration"),
-              value: configurationLabel(props.locale, account.configurationState),
-            },
-            ...queueItems,
-          ]}
-        />
+        {props.summaryAvailable ? null : (
+          <FieldList
+            density="compact"
+            items={[
+              {
+                id: "state",
+                label: copy(props.locale, "status.state"),
+                value: (
+                  <StatusBadge tone={stateTone(account.connectionState)}>
+                    {stateLabel(props.locale, account.connectionState)}
+                  </StatusBadge>
+                ),
+              },
+              {
+                id: "configuration",
+                label: copy(props.locale, "status.configuration"),
+                value: configurationLabel(props.locale, account.configurationState),
+              },
+              ...queueItems,
+            ]}
+          />
+        )}
         <Disclosure summary={copy(props.locale, "diagnostics")}>
           <FieldList density="compact" items={diagnostics} />
         </Disclosure>

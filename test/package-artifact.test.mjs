@@ -26,8 +26,8 @@ test("publishes schema-valid package and runtime manifests with an exact digest"
   const packageManifest = JSON.parse(packageText);
   const runtimeManifest = JSON.parse(runtimeText);
   const [validatePackage, validateRuntime] = await Promise.all([
-    protocolValidator("plugin-package.v8.schema.json"),
-    protocolValidator("plugin-manifest.v8.schema.json"),
+    protocolValidator("plugin-package.v16.schema.json"),
+    protocolValidator("plugin-manifest.v16.schema.json"),
   ]);
   assert.equal(validatePackage(packageManifest), true, JSON.stringify(validatePackage.errors));
   assert.equal(validateRuntime(runtimeManifest), true, JSON.stringify(validateRuntime.errors));

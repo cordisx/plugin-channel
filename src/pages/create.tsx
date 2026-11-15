@@ -1,9 +1,15 @@
 import { notifyResult } from "../notifications.js";
 import { type FormEvent, useMemo, useState } from "cordisx/react";
-import { Button, EmptyState, SchemaForm } from "cordisx/ui";
+import { Button, EmptyState, SchemaForm, Text } from "cordisx/ui";
 import type { ChannelPageProps } from "../page-types.js";
 import { copy } from "../locales.js";
-import { availablePlatforms, canCreateConnection, createChannelConnection, useChannelModel } from "../model.js";
+import {
+  availablePlatforms,
+  canCreateConnection,
+  createChannelConnection,
+  receiveSelectors,
+  useChannelModel,
+} from "../model.js";
 import { type ChannelPlatform, createSchema } from "../forms.js";
 import { ChannelShell } from "../shell.js";
 
@@ -16,7 +22,7 @@ export function ChannelCreate(props: ChannelPageProps) {
   const [draft, setDraft] = useState<Record<string, unknown>>({
     platform: platforms[0] ?? "simulator",
     displayName: "",
-    groups: false,
+    groupMode: "mentions",
   });
   const [valid, setValid] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -32,11 +38,11 @@ export function ChannelCreate(props: ChannelPageProps) {
       const result = await createChannelConnection(manager, snapshot, {
         platform,
         displayName: name,
-        selectors: draft.groups === true ? ["direct", "group"] : ["direct"],
+        selectors: receiveSelectors(draft.groupMode),
       });
       if (result === "applied") {
         await props.navigation.navigate({ id: "settings" });
-      } else notifyResult(props, "connection.create", false);
+      } else if (result !== "cancelled") notifyResult(props, "connection.create", false);
     } catch {
       notifyResult(props, "connection.create", false);
     } finally {
@@ -62,6 +68,7 @@ export function ChannelCreate(props: ChannelPageProps) {
               }}
               onValidationChange={next => setValid(next.valid)}
             />
+            {platform !== "simulator" ? <Text tone="muted">{copy(props.locale, "credential.create.help")}</Text> : null}
             <div className="cxc-channel-actions">
               <Button
                 variant="primary"

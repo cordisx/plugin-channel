@@ -4,13 +4,13 @@ import { configurationSchema, createSchema } from "../dist/forms.js";
 
 test("keeps invalid names and unavailable platforms out of connection creation", () => {
   const validate = createSchema("zh-CN", ["feishu", "lark"])["~standard"].validate;
-  assert.ok(validate({ platform: "simulator", displayName: "Support", groups: true }).issues);
-  assert.ok(validate({ platform: "feishu", displayName: "   ", groups: true }).issues);
-  assert.ok(validate({ platform: "feishu", displayName: "Support", groups: "true" }).issues);
-  assert.deepEqual(validate({ platform: "feishu", displayName: "Support", groups: true }).value, {
+  assert.ok(validate({ platform: "simulator", displayName: "Support", groupMode: "all" }).issues);
+  assert.ok(validate({ platform: "feishu", displayName: "   ", groupMode: "all" }).issues);
+  assert.ok(validate({ platform: "feishu", displayName: "Support", groupMode: "reply-to-everyone" }).issues);
+  assert.deepEqual(validate({ platform: "feishu", displayName: "Support", groupMode: "all" }).value, {
     platform: "feishu",
     displayName: "Support",
-    groups: true,
+    groupMode: "all",
   });
 });
 

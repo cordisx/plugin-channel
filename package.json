@@ -1,6 +1,6 @@
 {
   "name": "@cordisx/channel",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "description": "CordisX channel management plugin",
   "license": "AGPL-3.0-or-later",
@@ -16,7 +16,9 @@
     "README.md",
     "README.zh-Hans.md",
     "LICENSE",
-    "THIRD_PARTY_NOTICES.md"
+    "THIRD_PARTY_NOTICES.md",
+    "cordisx-documents.json",
+    "docs"
   ],
   "exports": {
     ".": {
@@ -43,7 +45,7 @@
   },
   "devDependencies": {
     "@cordisx/eslint-config": "github:cordisx/cordisxmono#c63c2e8c2ba7e11502934a52ad2ce3734e804cdc",
-    "@cordisx/protocol": "0.1.0-beta.12",
+    "@cordisx/protocol": "0.1.0-beta.13",
     "@projectwallace/stylelint-plugin": "0.7.0",
     "@deepseek-ai/cordis": "4.0.1",
     "@deepseek-ai/schemastery": "3.18.2",

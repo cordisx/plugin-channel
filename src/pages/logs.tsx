@@ -3,7 +3,7 @@ import type {
   ChannelManagerLogEntryV2,
   ChannelManagerSnapshotV3,
 } from "@cordisx/protocol/channel-manager/v2";
-import { Button, EmptyState, FilterToolbar, Icon, SearchField, Stack, StatusBadge } from "cordisx/ui";
+import { Button, Card, EmptyState, FilterToolbar, Icon, SearchField, Stack, StatusBadge, Text } from "cordisx/ui";
 import { useEffect, useRef, useState } from "cordisx/react";
 import { accountByToken, canExportLogs, canQueryLogs, operationFence, routeToken, useChannelModel } from "../model.js";
 import type { ChannelPageProps } from "../page-types.js";
@@ -172,16 +172,33 @@ function ConnectionLogs(
               />
             )
             : filtered.map(entry => (
-              <article key={entry.entryId} className="cxc-channel-log-entry">
-                <time dateTime={entry.occurredAt}>{new Date(entry.occurredAt).toLocaleString(props.locale)}</time>
-                <span className="cxc-channel-log-copy">
-                  <span>{logEventLabel(props.locale, entry.event)}</span>
-                  <span className="cxc-channel-log-code">{entry.code}</span>
+              <Card key={entry.entryId} as="article" className="cxc-channel-log-entry" data-level={entry.level}>
+                <span className="cxc-channel-log-icon">
+                  <Icon name={entry.level === "error" || entry.level === "warn" ? "health" : "host:clock"} />
                 </span>
-                <StatusBadge tone={entry.level === "error" ? "danger" : entry.level === "warn" ? "warning" : "neutral"}>
-                  {entry.level}
-                </StatusBadge>
-              </article>
+                <Stack gap="small" className="cxc-channel-log-copy">
+                  <Stack direction="row" align="center" justify="space-between" wrap gap="small">
+                    <Text as="span">{logEventLabel(props.locale, entry.event)}</Text>
+                    <StatusBadge
+                      tone={entry.level === "error" ? "danger" : entry.level === "warn" ? "warning" : "neutral"}
+                    >
+                      {copy(props.locale, `logs.level.${entry.level}`)}
+                    </StatusBadge>
+                  </Stack>
+                  <div className="cxc-channel-log-meta">
+                    <time dateTime={entry.occurredAt}>
+                      {new Date(entry.occurredAt).toLocaleString(props.locale, {
+                        month: "short",
+                        day: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        second: "2-digit",
+                      })}
+                    </time>
+                    {entry.code ? <code>{entry.code}</code> : null}
+                  </div>
+                </Stack>
+              </Card>
             ))}
         </div>
         {cursor === undefined ? null : (

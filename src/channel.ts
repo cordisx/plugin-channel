@@ -1,22 +1,29 @@
+import type { ChannelManagerV7 } from "@cordisx/protocol/channel-manager/v7";
+import type { ChannelManagerV9 } from "@cordisx/protocol/channel-manager/v9";
+import type { ChannelManagerV8 } from "@cordisx/protocol/channel-manager/v8";
+import type { PluginRuntimeManifestV16 } from "@cordisx/protocol/plugin-manifest/v16";
+import { withConfigurationHeader } from "./configuration-header.js";
+import type { ManagerContentNavigationDeclarationV6 } from "@cordisx/protocol/manager-content-navigation/v6";
+import { channelRecordSummary } from "./record-summary.js";
 import type { Context, Disposable } from "@deepseek-ai/cordis";
 import type { ChannelManagerV2 } from "@cordisx/protocol/channel-manager/v2";
+import type { ChannelManagerV4 } from "@cordisx/protocol/channel-manager/v4";
+import type { ChannelManagerV6 } from "@cordisx/protocol/channel-manager/v6";
 import {
   CORDISX_MANAGER_CONTENT_NAVIGATION_SCHEMA_V1,
   CORDISX_PAGE_SCHEMA_V4,
-  CORDISX_PLUGIN_MANIFEST_SCHEMA_V8,
   CORDISX_ROUTE_SCHEMA_V2,
   CORDISX_SURFACE_CONTRIBUTION_SCHEMA_V11,
   type CordisXLocalizedText,
   type CordisXManagerContentNavigationDeclarationV1,
   type CordisXMessageParams,
   type CordisXPageMetadataV4,
-  type CordisXPluginManifestV8,
   type CordisXPluginPresentation,
   type CordisXRouteDefinitionV2,
 } from "cordisx/contracts";
 import { defineReactPage } from "cordisx/react";
 import { createChannelPage } from "./page.js";
-import { type ChannelCopyMessages, channelLocales } from "./locales.js";
+import { type ChannelCopyMessages, channelLocales, copy } from "./locales.js";
 import { availablePlatforms } from "./model.js";
 
 export { icon } from "./brand-icon.js";
@@ -34,17 +41,11 @@ export const inject = [
 ];
 
 export const manifest = {
-  $schema: CORDISX_PLUGIN_MANIFEST_SCHEMA_V8,
-  schemaVersion: 8,
+  $schema: "https://raw.githubusercontent.com/cordisx/cordisx-protocol/main/schemas/plugin-manifest.v16.schema.json",
+  schemaVersion: 16,
   id: "channel",
   name: "Channels",
   capabilities: [
-    { name: "channel.accounts.read", required: true, scope: {} },
-    {
-      name: "channel.accounts.connect",
-      required: false,
-      scope: { channelAccounts: [{ adapterId: "simulator", accountId: "local" }] },
-    },
     {
       name: "channel.events.receive",
       required: false,
@@ -67,12 +68,6 @@ export const manifest = {
           kind: "direct",
         }],
       },
-    },
-    { name: "channel.bindings.read", required: false, scope: {} },
-    {
-      name: "channel.bindings.write",
-      required: false,
-      scope: { channelTenants: [{ adapterId: "simulator", accountId: "local", tenantId: "test" }] },
     },
     {
       name: "channel.attachments.read",
@@ -99,7 +94,7 @@ export const manifest = {
       configApplies: "restart",
     },
   }],
-} as const satisfies CordisXPluginManifestV8;
+} as const satisfies PluginRuntimeManifestV16;
 
 interface Messages extends ChannelCopyMessages {
   "plugin.name": undefined;
@@ -133,6 +128,7 @@ export const presentation = {
 const pages = [
   ["settings", "route.settings", "host:layers"],
   ["create", "route.create", "host:new"],
+  ["policy", "policy.configure", "host:settings"],
   ["configuration", "route.configuration", "host:settings"],
   ["logs", "route.logs", "host:history"],
   ["runtime", "route.runtime", "host:open"],
@@ -142,13 +138,18 @@ const pages = [
 const routes = [
   ["settings", "/manager/extensions/channels", "settings", "route.settings"],
   ["create", "/manager/extensions/channels/create", "create", "route.create"],
+  ["policy", "/manager/extensions/channels/policy", "policy", "policy.configure"],
   ["configuration", "/manager/extensions/channels/:connectionToken", "configuration", "route.configuration"],
   ["logs", "/manager/extensions/channels/:connectionToken/logs", "logs", "route.logs"],
   ["runtime", "/manager/extensions/channels/:connectionToken/runtime", "runtime", "route.runtime"],
   ["sessions", "/manager/extensions/channels/:connectionToken/sessions", "sessions", "route.sessions"],
 ] as const;
 
-function page([id, title, icon]: typeof pages[number], canCreate = false): CordisXPageMetadataV4 {
+function page(
+  [id, title, icon]: typeof pages[number],
+  canCreate = false,
+  canConfigurePolicy = false,
+): CordisXPageMetadataV4 {
   return {
     $schema: CORDISX_PAGE_SCHEMA_V4,
     schemaVersion: 4,
@@ -161,12 +162,36 @@ function page([id, title, icon]: typeof pages[number], canCreate = false): Cordi
       ? {
         breadcrumbs: [],
         headerActions: [{
+          id: "policy",
+          label: message("policy.configure"),
+          ariaLabel: message("policy.configure"),
+          icon: "host:settings" as const,
+          command: { id: "configure-policy" },
+          disabled: { value: !canConfigurePolicy },
+        }, {
           id: "create",
           label: message("route.create"),
           ariaLabel: message("route.create"),
           icon: "host:new" as const,
           command: { id: "open-create" },
           disabled: { value: !canCreate, ...(!canCreate ? { reason: message("create.unavailable") } : {}) },
+        }],
+      }
+      : {}),
+    ...(id === "configuration"
+      ? {
+        headerActions: [{
+          id: "connection-toggle",
+          label: message("connection.disable"),
+          ariaLabel: message("connection.disable"),
+          presentation: "text" as const,
+          command: { id: "toggle-connection" },
+        }, {
+          id: "connection-reconnect",
+          label: message("connection.reconnect"),
+          ariaLabel: message("connection.reconnect"),
+          icon: "host:refresh" as const,
+          command: { id: "reconnect-connection" },
         }],
       }
       : {}),
@@ -200,7 +225,57 @@ function platformTitle(kind: string): CordisXLocalizedText {
 }
 
 function managerFor(ctx: Context): ChannelManagerV2 {
-  return ctx.channelManager;
+  const manager = ctx.channelManager as Partial<ChannelManagerV9>;
+  const own = typeof manager.forOwnWorkflowService === "function"
+    ? manager.forOwnWorkflowService()
+    : typeof manager.forOwnConfigurationService === "function"
+    ? manager.forOwnConfigurationService()
+    : typeof manager.forOwnPageService === "function"
+    ? manager.forOwnPageService()
+    : typeof manager.forOwnReplyService === "function"
+    ? manager.forOwnReplyService()
+    : typeof manager.forOwnService === "function"
+    ? manager.forOwnService()
+    : undefined;
+  if (own) return own;
+  // Older Hosts or an inactive service must not manufacture a delegated grant.
+  return {
+    snapshot: () => ({
+      contract: "cordisx.channel-runtime-snapshot/v3",
+      schemaVersion: 3,
+      profileId: "unavailable",
+      hostGeneration: "unavailable",
+      revision: 0,
+      observedAt: new Date(0).toISOString(),
+      accounts: [],
+      bindings: [],
+      pendingAuthorizations: [],
+      availableOperations: [],
+    }),
+    subscribe: () => ({ dispose() {} }),
+    issue: async request => ({
+      ...request,
+      contract: "cordisx.channel-manager-target-result/v1",
+      schemaVersion: 1,
+      revision: 0,
+      status: "unavailable",
+      code: "SERVICE_UNAVAILABLE",
+    }),
+    execute: async request => ({
+      ...request,
+      contract: "cordisx.channel-manager-result/v2",
+      schemaVersion: 2,
+      revision: 0,
+      status: "unavailable",
+      code: "SERVICE_UNAVAILABLE",
+    }),
+    queryLogs: async () => {
+      throw new Error("SERVICE_UNAVAILABLE");
+    },
+    exportLogs: async () => {
+      throw new Error("SERVICE_UNAVAILABLE");
+    },
+  };
 }
 
 /** Registers one page factory and one lifecycle-owned Channel projection. */
@@ -248,12 +323,60 @@ export function apply(ctx: Context): void {
   });
 
   const manager = managerFor(ctx);
-  const mount = defineReactPage<Messages>(createChannelPage(manager, ctx.notifications));
-  for (const tuple of pages.filter(([id]) => id !== "settings")) ctx.pages.register<Messages>(page(tuple), mount);
+  // beta.63's SDK predates this additive public v6 service. Use the Protocol
+  // declaration only when the actual Host advertises the matching version.
+  const managerContent = ctx.managerContent as typeof ctx.managerContent & {
+    readonly supportedSchemaVersions?: readonly number[];
+    replaceProjection(projection: {
+      readonly declarations:
+        readonly (CordisXManagerContentNavigationDeclarationV1 | ManagerContentNavigationDeclarationV6)[];
+      readonly recordTitles: Parameters<typeof ctx.managerContent.registerRecordTitles>[0];
+    }): Disposable<void | Promise<void>>;
+  };
+  const summaryAvailable = managerContent.supportedSchemaVersions?.includes(6) ?? false;
+  const mount = defineReactPage<Messages>(createChannelPage(manager, ctx.notifications, summaryAvailable));
+  for (const tuple of pages.filter(([id]) => id !== "settings")) {
+    ctx.pages.register<Messages>(
+      page(tuple),
+      tuple[0] === "configuration" ? withConfigurationHeader(ctx, manager, mount) : mount,
+    );
+  }
   for (const definition of routes.map(route)) ctx.routes.register(definition);
   ctx.commands.register({ id: "open-create", title: message("route.create") }, async ({ signal }) => {
     if (signal.aborted || availablePlatforms(manager.snapshot()).length === 0) return;
     await ctx.routes.navigate({ id: "create" });
+  });
+
+  ctx.commands.register({ id: "configure-policy", title: message("policy.configure") }, async ({ signal }) => {
+    const policyManager = manager as Partial<ChannelManagerV7>;
+    if (typeof policyManager.mountConversationReplyPolicyForm === "function") {
+      if (!signal.aborted) await ctx.routes.navigate({ id: "policy" });
+      return;
+    }
+    const configure = typeof policyManager.configureConversationReplyPolicy === "function"
+      ? policyManager.configureConversationReplyPolicy
+      : policyManager.configureConversationPolicy;
+    if (signal.aborted || typeof configure !== "function") return;
+    try {
+      const result = await configure.call(policyManager, signal);
+      if (result.status === "cancelled" || signal.aborted) return;
+      ctx.notifications.show({
+        kind: result.status === "applied" ? "channel.operation.saved" : "channel.operation.failed",
+        type: result.status === "applied" ? "success" : "error",
+        message: copy(
+          document.documentElement.lang,
+          result.status === "applied" ? "operation.saved" : "operation.failed",
+        ),
+      });
+    } catch {
+      if (!signal.aborted) {
+        ctx.notifications.show({
+          kind: "channel.operation.failed",
+          type: "error",
+          message: copy(document.documentElement.lang, "operation.failed"),
+        });
+      }
+    }
   });
 
   ctx.effect(() => {
@@ -261,14 +384,26 @@ export function apply(ctx: Context): void {
     let disposeListPage: Disposable<void | Promise<void>> = () => {};
     let listCanCreate: boolean | undefined;
     const refresh = () => {
-      const snapshot = manager.snapshot();
+      const snapshot =
+        summaryAvailable && "snapshotWithIdentity" in manager && typeof manager.snapshotWithIdentity === "function"
+          ? (manager as ChannelManagerV7).snapshotWithIdentity()
+          : manager.snapshot();
       const canCreate = availablePlatforms(snapshot).length > 0;
       if (listCanCreate !== canCreate) {
         void disposeListPage();
-        disposeListPage = ctx.pages.register<Messages>(page(pages[0], canCreate), mount);
+        disposeListPage = ctx.pages.register<Messages>(
+          page(
+            pages[0],
+            canCreate,
+            typeof (manager as Partial<ChannelManagerV7>).mountConversationReplyPolicyForm === "function"
+              || typeof (manager as Partial<ChannelManagerV6>).configureConversationReplyPolicy === "function"
+              || typeof (manager as Partial<ChannelManagerV4>).configureConversationPolicy === "function",
+          ),
+          mount,
+        );
         listCanCreate = canCreate;
       }
-      const declarations: CordisXManagerContentNavigationDeclarationV1[] = [{
+      const declarations: (CordisXManagerContentNavigationDeclarationV1 | ManagerContentNavigationDeclarationV6)[] = [{
         $schema: CORDISX_MANAGER_CONTENT_NAVIGATION_SCHEMA_V1,
         schemaVersion: 1,
         id: "root",
@@ -282,6 +417,14 @@ export function apply(ctx: Context): void {
         parentRoute: { id: "settings" },
         header: { title: { kind: "route" } },
       }];
+      declarations.push({
+        $schema: CORDISX_MANAGER_CONTENT_NAVIGATION_SCHEMA_V1,
+        schemaVersion: 1,
+        id: "policy",
+        route: { id: "policy" },
+        parentRoute: { id: "settings" },
+        header: { title: { kind: "route" } },
+      });
       const recordTitles = snapshot.accounts.map(account => ({
         id: account.connectionToken,
         title: account.displayName === undefined
@@ -295,8 +438,14 @@ export function apply(ctx: Context): void {
         }));
         for (const tab of tabs) {
           declarations.push({
-            $schema: CORDISX_MANAGER_CONTENT_NAVIGATION_SCHEMA_V1,
-            schemaVersion: 1,
+            ...(summaryAvailable
+              ? {
+                $schema:
+                  "https://raw.githubusercontent.com/cordisx/cordisx-protocol/main/schemas/manager-content-navigation.v6.schema.json" as const,
+                schemaVersion: 6 as const,
+                recordSummary: channelRecordSummary(account, document.documentElement.lang || "en"),
+              }
+              : { $schema: CORDISX_MANAGER_CONTENT_NAVIGATION_SCHEMA_V1, schemaVersion: 1 as const }),
             id: declarationId(tab.id, account.connectionToken),
             route: tab.route,
             parentRoute: { id: "settings" },
@@ -307,7 +456,7 @@ export function apply(ctx: Context): void {
           });
         }
       }
-      disposeProjection = ctx.managerContent.replaceProjection({ declarations, recordTitles });
+      disposeProjection = managerContent.replaceProjection({ declarations, recordTitles });
     };
     refresh();
     const subscription = manager.subscribe(refresh);

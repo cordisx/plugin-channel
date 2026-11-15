@@ -1,6 +1,7 @@
 import type {
   ChannelManagerAccountV3,
   ChannelManagerBindingV3,
+  ChannelManagerSelectorV2,
   ChannelManagerSnapshotV3,
   ChannelManagerV2,
 } from "@cordisx/protocol/channel-manager/v2";
@@ -88,9 +89,9 @@ export async function createChannelConnection(
   input: {
     readonly platform: "simulator" | "feishu" | "lark";
     readonly displayName: string;
-    readonly selectors: readonly ("direct" | "group")[];
+    readonly selectors: readonly ChannelManagerSelectorV2[];
   },
-): Promise<"applied" | "conflict" | "rejected" | "unavailable"> {
+): Promise<"applied" | "cancelled" | "conflict" | "rejected" | "unavailable"> {
   let issued;
   if (input.platform === "simulator") {
     issued = await manager.issue({
@@ -120,7 +121,9 @@ export async function createChannelConnection(
       operation: "credential.capture",
       target: captureTarget.target,
     });
-    if (captured.status !== "applied" || captured.operation !== "credential.capture") return captured.status;
+    if (captured.status !== "applied" || captured.operation !== "credential.capture") {
+      return captured.code === "CAPTURE_CANCELLED" ? "cancelled" : captured.status;
+    }
     issued = await manager.issue({
       ...targetFence(snapshot, captured.revision),
       operation: "target.connection.create",
@@ -141,12 +144,51 @@ export async function createChannelConnection(
   return result.status;
 }
 
+export async function rotateChannelCredential(
+  manager: ChannelManagerV2,
+  snapshot: ChannelManagerSnapshotV3,
+  account: ChannelManagerAccountV3,
+): Promise<"applied" | "cancelled" | "conflict" | "rejected" | "unavailable"> {
+  const target = { kind: "connection" as const, connectionToken: account.connectionToken };
+  const issued = await manager.issue({
+    ...targetFence(snapshot),
+    operation: "target.credential.capture.rotate",
+    purpose: "rotate",
+    target,
+  });
+  if (
+    issued.status !== "applied" || !issued.operation.startsWith("target.credential.capture")
+    || issued.target.kind !== "credential-capture"
+  ) return issued.status;
+  const captured = await manager.execute({
+    ...operationFence(snapshot, issued.revision),
+    operation: "credential.capture",
+    target: issued.target,
+  });
+  if (captured.status !== "applied" || captured.operation !== "credential.capture") {
+    return captured.code === "CAPTURE_CANCELLED" ? "cancelled" : captured.status;
+  }
+  const result = await manager.execute({
+    ...operationFence(snapshot, captured.revision),
+    operation: "connection.rotate-credential",
+    target,
+    draft: { credentialDraftToken: captured.credentialDraftToken },
+  });
+  return result.status;
+}
+
 export function routeToken(value: unknown): string | undefined {
   return typeof value === "string" ? value : undefined;
 }
 
+export function receiveSelectors(groupMode: unknown): readonly ChannelManagerSelectorV2[] {
+  if (groupMode === "all") return ["direct", "group"];
+  if (groupMode === "mentions") return ["direct", "mentions"];
+  return ["direct"];
+}
+
 export function canCreateConnection(
-  snapshot: ChannelManagerSnapshotV3,
+  snapshot: Pick<ChannelManagerSnapshotV3, "availableOperations">,
   platform: "simulator" | "feishu" | "lark",
 ): boolean {
   return snapshot.availableOperations.includes(
@@ -154,7 +196,9 @@ export function canCreateConnection(
   );
 }
 
-export function availablePlatforms(snapshot: ChannelManagerSnapshotV3): readonly ("simulator" | "feishu" | "lark")[] {
+export function availablePlatforms(
+  snapshot: Pick<ChannelManagerSnapshotV3, "availableOperations">,
+): readonly ("simulator" | "feishu" | "lark")[] {
   return (["feishu", "lark", "simulator"] as const).filter(platform => canCreateConnection(snapshot, platform));
 }
 

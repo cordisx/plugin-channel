@@ -6,7 +6,7 @@ test("publishes exact formal Protocol and Host baselines", async () => {
   const status = await import("../dist/status.js");
   assert.equal(status.CHANNEL_PLUGIN_STATUS, "package-verification");
   assert.equal(status.REQUIRED_BASELINES.host, "92997768eaa8073ad1d44f64acc12a39b03f8465");
-  assert.equal(status.REQUIRED_BASELINES.protocol, "4b0ffe0db59915ea1ccea2db11b887e0ca573ffa");
+  assert.equal(status.REQUIRED_BASELINES.protocol, "dc39c84ed32a0af13ad14655491b605a4a7be45a");
 });
 
 test("keeps Host-private imports out of standalone source", async () => {
@@ -28,12 +28,19 @@ test("owns maintained Channel styles as a real stylesheet", async () => {
   assert.doesNotMatch(styles, /<style>|const STYLES/);
 });
 
-test("scopes binding mutation to the manifest-authorized simulator tenant", async () => {
+test("uses its own management service without requesting delegated account or binding grants", async () => {
   const source = await import("../dist/channel.js");
-  const capability = source.manifest.capabilities.find(item => item.name === "channel.bindings.write");
-  assert.deepEqual(capability.scope, {
-    channelTenants: [{ adapterId: "simulator", accountId: "local", tenantId: "test" }],
-  });
+  for (
+    const name of [
+      "channel.bindings.write",
+      "channel.accounts.connect",
+      "channel.accounts.read",
+      "channel.bindings.read",
+    ]
+  ) {
+    const capability = source.manifest.capabilities.find(item => item.name === name);
+    assert.equal(capability, undefined);
+  }
 });
 
 test("uses the public Host new-action icon token for the create page", async () => {

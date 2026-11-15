@@ -35,8 +35,17 @@ function displayName(locale: string) {
     .extra("extra", { label: copy(locale, "create.name") });
 }
 
-export function configurationSchema(locale: string) {
-  return hostSchema(Schema.object({ displayName: displayName(locale) }));
+const groupMode = (locale: string) =>
+  Schema.union(
+    (["none", "mentions", "all"] as const).map(mode =>
+      Schema.const(mode).extra("extra", { label: copy(locale, `groups.${mode}`) })
+    ),
+  ).required().extra("extra", { label: copy(locale, "create.groups") }).description(copy(locale, "create.groups.help"));
+
+export function configurationSchema(locale: string, reception = false) {
+  return hostSchema(
+    Schema.object({ displayName: displayName(locale), ...(reception ? { groupMode: groupMode(locale) } : {}) }),
+  );
 }
 
 export function createSchema(locale: string, platforms: readonly ChannelPlatform[]) {
@@ -45,8 +54,6 @@ export function createSchema(locale: string, platforms: readonly ChannelPlatform
       platforms.map(platform => Schema.const(platform).extra("extra", { label: platformLabel(locale, platform) })),
     ).required().extra("extra", { label: copy(locale, "create.platform") }),
     displayName: displayName(locale),
-    groups: Schema.boolean().default(false).role("switch")
-      .extra("extra", { label: copy(locale, "create.groups") })
-      .description(copy(locale, "create.groups.help")),
+    groupMode: groupMode(locale),
   }));
 }

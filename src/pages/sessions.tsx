@@ -1,5 +1,9 @@
 import { Button, EmptyState, SearchField, Stack, StatusBadge } from "cordisx/ui";
-import { useState } from "cordisx/react";
+import { useEffect, useRef, useState } from "cordisx/react";
+import type { ChannelManagerBindingV3 } from "@cordisx/protocol/channel-manager/v2";
+import type { ChannelManagerBindingDisplayV1, ChannelManagerV9 } from "@cordisx/protocol/channel-manager/v9";
+import type { ChannelManagerFormMountResultV1 } from "@cordisx/protocol/channel-manager/v7";
+import type { ChannelManagerV4 } from "@cordisx/protocol/channel-manager/v4";
 import { bindingsForAccount, operationFence, routeToken, useChannelModel } from "../model.js";
 import type { ChannelPageProps } from "../page-types.js";
 import { copy } from "../locales.js";
@@ -10,14 +14,68 @@ import { ChannelShell } from "../shell.js";
 export function ChannelSessions(props: ChannelPageProps) {
   const { manager, snapshot } = useChannelModel(props.manager);
   const token = routeToken(props.params.connectionToken);
-  const bindings = token === undefined ? [] : bindingsForAccount(snapshot, token);
+  const [loaded, setLoaded] = useState<readonly (ChannelManagerBindingV3 | ChannelManagerBindingDisplayV1)[]>();
+  const [executionTarget, setExecutionTarget] = useState<string>();
+  const [nextCursor, setNextCursor] = useState<string>();
+  const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const pageLifetime = useRef<AbortController | undefined>(undefined);
+  const pageManager = manager as Partial<ChannelManagerV9>;
+  const bindings = loaded ?? (token === undefined ? [] : bindingsForAccount(snapshot, token));
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState<string>();
   const [confirm, setConfirm] = useState<string>();
   const needle = searchText(query);
+
+  useEffect(() => {
+    setLoaded(undefined);
+    setNextCursor(undefined);
+    if (!token || typeof pageManager.bindingPage !== "function") return;
+    const lifetime = new AbortController();
+    pageLifetime.current = lifetime;
+    setLoading(true);
+    setFailed(false);
+    const read = pageManager.bindingDisplayPage?.bind(pageManager) ?? pageManager.bindingPage.bind(pageManager);
+    void read({ connectionToken: token, limit: 100 }, lifetime.signal).then(page => {
+      if (lifetime.signal.aborted) return;
+      setLoaded(page.bindings);
+      setNextCursor(page.nextCursor);
+    }).catch(() => {
+      if (!lifetime.signal.aborted) setFailed(true);
+    })
+      .finally(() => {
+        if (!lifetime.signal.aborted) setLoading(false);
+      });
+    return () => {
+      lifetime.abort();
+      if (pageLifetime.current === lifetime) pageLifetime.current = undefined;
+    };
+  }, [manager, token, snapshot.revision]);
+
+  const more = async () => {
+    if (loading || !token || !nextCursor || typeof pageManager.bindingPage !== "function") return;
+    const lifetime = pageLifetime.current;
+    if (!lifetime || lifetime.signal.aborted) return;
+    setLoading(true);
+    try {
+      const read = pageManager.bindingDisplayPage?.bind(pageManager) ?? pageManager.bindingPage.bind(pageManager);
+      const page = await read(
+        { connectionToken: token, afterCursor: nextCursor, limit: 100 },
+        lifetime.signal,
+      );
+      if (lifetime.signal.aborted || lifetime !== pageLifetime.current) return;
+      setLoaded(current => [...(current ?? []), ...page.bindings]);
+      setNextCursor(page.nextCursor);
+    } catch {
+      if (!lifetime.signal.aborted && lifetime === pageLifetime.current) setFailed(true);
+    } finally {
+      if (!lifetime.signal.aborted && lifetime === pageLifetime.current) setLoading(false);
+    }
+  };
   const filtered = bindings.filter(binding =>
     searchText([
-      binding.sessionToken,
+      "sessionName" in binding ? binding.sessionName : "",
+      "conversationName" in binding ? binding.conversationName : "",
       bindingLabel(props.locale, binding.state),
       binding.state,
     ].join(" ")).includes(needle)
@@ -61,18 +119,47 @@ export function ChannelSessions(props: ChannelPageProps) {
         />
         <div className="cxc-channel-results">
           {filtered.length === 0
-            ? <EmptyState title={copy(props.locale, needle === "" ? "sessions.empty" : "sessions.no-match")} />
+            ? (
+              <EmptyState
+                title={copy(
+                  props.locale,
+                  failed ? "logs.failed" : loading
+                    ? "logs.loading"
+                    : needle === ""
+                    ? "sessions.empty"
+                    : "sessions.no-match",
+                )}
+              />
+            )
             : filtered.map(binding => (
               <article key={binding.bindingToken} className="cxc-channel-binding">
                 <span className="cxc-channel-binding-copy">
                   <StatusBadge tone={binding.state === "active" ? "success" : "neutral"}>
                     {bindingLabel(props.locale, binding.state)}
                   </StatusBadge>
-                  <span className="cxc-channel-session-token" title={binding.sessionToken}>
-                    {copy(props.locale, "binding.session")} · {binding.sessionToken}
+                  <span className="cxc-channel-session-token">
+                    {"sessionName" in binding && typeof binding.sessionName === "string"
+                      ? binding.sessionName
+                      : copy(props.locale, "binding.session")}
                   </span>
+                  {"conversationName" in binding && typeof binding.conversationName === "string"
+                    ? <span>{binding.conversationName}</span>
+                    : null}
                 </span>
                 <span className="cxc-channel-actions">
+                  {pageManager.mountBindingExecutionForm
+                    ? (
+                      <Button
+                        variant="secondary"
+                        onClick={() =>
+                          setExecutionTarget(current =>
+                            current === binding.bindingToken ? undefined : binding.bindingToken
+                          )}
+                      >
+                        {props.locale.startsWith("zh") ? "执行设置" : "Execution settings"}
+                      </Button>
+                    )
+                    : null}
                   {binding.availableOperations.map(operation => (
                     <Button
                       key={operation}
@@ -100,10 +187,52 @@ export function ChannelSessions(props: ChannelPageProps) {
                     )
                     : null}
                 </span>
+                {executionTarget === binding.bindingToken
+                  ? <BindingExecutionForm {...props} bindingToken={binding.bindingToken} />
+                  : null}
               </article>
             ))}
+          {nextCursor
+            ? <Button disabled={loading} onClick={() => void more()}>{copy(props.locale, "logs.load-more")}</Button>
+            : null}
         </div>
       </Stack>
     </ChannelShell>
+  );
+}
+
+function BindingExecutionForm(props: ChannelPageProps & { readonly bindingToken: string }) {
+  const target = useRef<HTMLDivElement>(null);
+  const [unavailable, setUnavailable] = useState(false);
+  useEffect(() => {
+    const manager = props.manager as Partial<ChannelManagerV9>;
+    if (!target.current || !manager.mountBindingExecutionForm) {
+      setUnavailable(true);
+      return;
+    }
+    const lifetime = new AbortController();
+    let handle: ChannelManagerFormMountResultV1 | undefined;
+    void manager.mountBindingExecutionForm(props.bindingToken, target.current, {
+      signal: lifetime.signal,
+      onResult: result => {
+        if (!lifetime.signal.aborted) notifyResult(props, "policy.configure", result.status === "applied");
+      },
+    }).then(result => {
+      handle = result;
+      if (lifetime.signal.aborted && result.status === "mounted") result.dispose();
+      else setUnavailable(result.status !== "mounted");
+    }).catch(() => {
+      if (!lifetime.signal.aborted) setUnavailable(true);
+    });
+    return () => {
+      lifetime.abort();
+      if (handle?.status === "mounted") handle.dispose();
+    };
+  }, [props.manager, props.bindingToken]);
+  return (
+    <div className="cxc-channel-binding-execution">
+      {unavailable ? <EmptyState title={copy(props.locale, "policy.unavailable")} /> : null}
+      <div ref={target} />
+    </div>
   );
 }

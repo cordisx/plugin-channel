@@ -47,39 +47,68 @@
   font-size: 12px;
 }
 
-.cxc-channel-log-entry {
-  display: grid;
-  grid-template-columns: minmax(8rem, auto) minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: baseline;
-  padding: 10px 0;
-  border-block-end: 1px solid var(--cx-border);
-  font-size: 12px;
+.cxc-channel-results {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 8px;
+  overflow: auto;
 }
 
-.cxc-channel-log-entry time {
+.cxc-channel-log-entry {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+}
+
+.cxc-channel-log-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
   color: var(--cx-muted);
-  font-variant-numeric: tabular-nums;
 }
 
 .cxc-channel-log-copy {
-  display: grid;
-  gap: 2px;
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.cxc-channel-log-code {
+.cxc-channel-log-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 12px;
   color: var(--cx-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cxc-channel-log-meta code {
+  font-size: inherit;
+}
+
+.cxc-channel-policy-seat {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
 }
 
 @media (width <= 700px) {
-  .cxc-channel-log-entry {
-    grid-template-columns: minmax(0, 1fr) auto;
+  .cxc-channel-log-meta {
     gap: 4px 8px;
   }
+}
 
-  .cxc-channel-log-entry time {
-    grid-column: 1 / -1;
-  }
+/* Binding execution forms occupy the shared detail body; cards retain their compact action row. */
+.cxc-channel-binding:has(.cxc-channel-binding-execution) {
+  flex-wrap: wrap;
+}
+
+.cxc-channel-binding-execution {
+  flex-basis: 100%;
+  min-width: 0;
 }
