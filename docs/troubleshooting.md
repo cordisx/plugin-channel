@@ -19,3 +19,5 @@ RPC_RESULT_UNKNOWN 或部分返回不能证明已发送，也不证明没有发�
 模型 final、commentary、stop 不是 CLI 发送证据。autoReply 默认关闭；显式发送收据与模型完成分别查看。原生权限请求可在飞书卡片或 /approvals 感知，批准提交后仍等原生确认。不要把账号授权、插件权限和聊天执行权限混为一谈。
 
 CHANNEL_CONTEXT_UNAVAILABLE 表示当前入站身份关联已失效或不匹配。使用该 turn 提供的 --context 和精确 CLI，不沿用上一条消息的上下文。MODEL_CHANGE_PERMISSION_DENIED 表示批准者缺少本次字段／服务商／模型权限；不能改用普通 /approve 绕过。REVISION_CONFLICT 表示原生或保存配置已变化，应重新读取后发起新申请。NATIVE_EFFECT_UNCERTAIN 表示执行结果未知，先核对真实配置，不自动重复修改。
+
+`CHANNEL_REMOTE_HISTORY_PERMISSION_DENIED` 表示所选机器人应用无法读取远端历史，不代表群内没有消息。参照 [Host Channel 指南](https://github.com/cordisx/cordisx/blob/main/.agents/docs/channel-cli.md) 检查同一应用的消息权限、群成员身份和发布状态；不要切换到其他用户身份绕过。`CHANNEL_REMOTE_HISTORY_TIMEOUT` 表示查询超时，可在确认需求后缩小时间范围重试。
