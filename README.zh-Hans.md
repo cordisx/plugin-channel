@@ -5,22 +5,22 @@ Channel 提供 CordisX 内的渠道账号、运行状态、日志和 Session bin
 
 ## 安装
 
-插件 ID：`channel`。当前版本：`0.1.2`。
+插件 ID：`channel`。当前版本：`0.1.3`。
 
 CordisX Community Marketplace feed 必须先完成配置并启用，`--source` 才能选择它：
 
 ```sh
 FEED_URL=https://raw.githubusercontent.com/cordisx/marketplace/main/marketplace.json
 npx cordisx@beta source add "$FEED_URL" --yes
-npx cordisx@beta plugin install channel --source "$FEED_URL" --version 0.1.2
+npx cordisx@beta plugin install channel --source "$FEED_URL" --version 0.1.3
 ```
 
 若该 feed 已启用，可跳过 `source add`。使用其他 profile 时，两条命令都要添加
 相同的 `--profile <profile>`。`--yes` 只确认来源变更，不会批准插件权限；发现来源
 也不等同于 trust root。
 
-Marketplace 条目列出 `0.1.2` artifact 后，安装命令才可用。在此之前，可从
-[GitHub Release](https://github.com/cordisx/plugin-channel/releases/tag/v0.1.2)
+Marketplace 条目列出 `0.1.3` artifact 后，安装命令才可用。在此之前，可从
+[GitHub Release](https://github.com/cordisx/plugin-channel/releases/tag/v0.1.3)
 下载压缩包与 `SHA256SUMS`。
 
 ## 使用
@@ -51,7 +51,7 @@ conversation。启用前请检查这些权限。
 
 ## 排错
 
-- **找不到 `0.1.2`：**确认 Marketplace 条目已列出 release artifact；`--source`
+- **找不到 `0.1.3`：**确认 Marketplace 条目已列出 release artifact；`--source`
   不会添加或修复 feed。
 - **没有账号：**检查 Host 是否支持 `channel-manager/v5`，以及当前 profile 的 Channel
   service 是否已启动。

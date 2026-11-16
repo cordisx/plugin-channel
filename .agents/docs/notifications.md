@@ -13,10 +13,10 @@ owns the public API. Source merge and package publication are separate stages.
 
 ## Development dependencies
 
-`package.json` and `package-lock.json` pin published `cordisx@0.1.0-beta.63`
-and `@cordisx/protocol@0.1.0-beta.13`. The Channel pages use the public Host
+`package.json` and `package-lock.json` pin published `cordisx@0.1.0-beta.66`
+and `@cordisx/protocol@0.1.0-beta.14`. The Channel pages use the public Host
 search, filter, status, field-list and schema-form components; this UI requires
-Host beta.63 or later. Install through the repository's normal dependency flow:
+Host beta.66 or later. Install through the repository's normal dependency flow:
 
 ```sh
 npm ci
