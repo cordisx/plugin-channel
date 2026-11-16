@@ -1,5 +1,6 @@
 import type { ChannelManagerV7 } from "@cordisx/protocol/channel-manager/v7";
 import type { ChannelManagerV10 } from "@cordisx/protocol/channel-manager/v10";
+import type { ChannelManagerV12 } from "@cordisx/protocol/channel-manager/v12";
 import type { ChannelManagerV11 } from "@cordisx/protocol/channel-manager/v11";
 import { channelSettingsTabs } from "./settings.js";
 import { ChannelConversationCatalog } from "./conversation-catalog.js";
@@ -353,6 +354,8 @@ export function apply(ctx: Context): void {
 
   const manager = managerFor(ctx);
   const settingsAvailable = typeof (manager as Partial<ChannelManagerV11>).mountSettingsForm === "function";
+  const modelsAvailable = typeof (manager as Partial<ChannelManagerV12>).mountBindingModelForm === "function";
+  const supportedSettingsTabs = channelSettingsTabs.filter(tab => tab.id !== "preferences-models" || modelsAvailable);
   // beta.63's SDK predates this additive public v6 service. Use the Protocol
   // declaration only when the actual Host advertises the matching version.
   const managerContent = ctx.managerContent as typeof ctx.managerContent & {
@@ -373,14 +376,19 @@ export function apply(ctx: Context): void {
     createChannelPage(manager, ctx.notifications, conversations, summaryAvailable),
   );
   for (const tuple of pages.filter(([id]) => id !== "settings")) {
-    if (tuple[0].startsWith("preferences-") && !settingsAvailable) continue;
+    if (
+      tuple[0].startsWith("preferences-") && !settingsAvailable || tuple[0] === "preferences-models" && !modelsAvailable
+    ) continue;
     ctx.pages.register<Messages>(
       page(tuple),
       tuple[0] === "configuration" ? withConfigurationHeader(ctx, manager, mount) : mount,
     );
   }
   for (const definition of routes.map(route)) {
-    if (definition.id.startsWith("preferences-") && !settingsAvailable) continue;
+    if (
+      definition.id.startsWith("preferences-") && !settingsAvailable
+      || definition.id === "preferences-models" && !modelsAvailable
+    ) continue;
     ctx.routes.register(definition);
   }
   if (settingsAvailable) {
@@ -485,7 +493,7 @@ export function apply(ctx: Context): void {
         header: { title: { kind: "route" } },
       });
       if (settingsAvailable) {
-        const settingsTabs = channelSettingsTabs.map(tab => ({
+        const settingsTabs = supportedSettingsTabs.map(tab => ({
           id: tab.id,
           route: { id: tab.id },
           label: message(tab.title),

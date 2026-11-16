@@ -1,4 +1,4 @@
-import type { ChannelManagerV11, ChannelSettingsFormSectionV1 } from "@cordisx/protocol/channel-manager/v11";
+import type { ChannelManagerV12, ChannelSettingsFormSectionV2 } from "@cordisx/protocol/channel-manager/v12";
 import type { ChannelManagerFormMountResultV1 } from "@cordisx/protocol/channel-manager/v7";
 import { useEffect, useRef, useState } from "cordisx/react";
 import { EmptyState } from "cordisx/ui";
@@ -7,12 +7,12 @@ import { copy } from "../locales.js";
 import { notifyResult } from "../notifications.js";
 import { ChannelShell } from "../shell.js";
 
-export function ChannelPolicy(props: ChannelPageProps & { readonly settingsSection?: ChannelSettingsFormSectionV1 }) {
+export function ChannelPolicy(props: ChannelPageProps & { readonly settingsSection?: ChannelSettingsFormSectionV2 }) {
   const target = useRef<HTMLDivElement>(null);
   const defaults = useRef<HTMLDivElement>(null);
   const [unavailable, setUnavailable] = useState(false);
   useEffect(() => {
-    const manager = props.manager as Partial<ChannelManagerV11>;
+    const manager = props.manager as Partial<ChannelManagerV12>;
     if (props.settingsSection) {
       if (!target.current || typeof manager.mountSettingsForm !== "function") {
         setUnavailable(true);

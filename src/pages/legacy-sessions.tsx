@@ -1,5 +1,6 @@
 import { Button, EmptyState, SearchField, Stack, StatusBadge } from "cordisx/ui";
 import { useEffect, useRef, useState } from "cordisx/react";
+import type { ChannelManagerV12 } from "@cordisx/protocol/channel-manager/v12";
 import type { ChannelManagerBindingV3 } from "@cordisx/protocol/channel-manager/v2";
 import type { ChannelManagerBindingDisplayV1, ChannelManagerV9 } from "@cordisx/protocol/channel-manager/v9";
 import type { ChannelManagerFormMountResultV1 } from "@cordisx/protocol/channel-manager/v7";
@@ -203,6 +204,7 @@ export function LegacyChannelSessions(props: ChannelPageProps) {
 
 export function BindingExecutionForm(props: ChannelPageProps & { readonly bindingToken: string }) {
   const target = useRef<HTMLDivElement>(null);
+  const modelsTarget = useRef<HTMLDivElement>(null);
   const [unavailable, setUnavailable] = useState(false);
   useEffect(() => {
     const manager = props.manager as Partial<ChannelManagerV9>;
@@ -211,27 +213,41 @@ export function BindingExecutionForm(props: ChannelPageProps & { readonly bindin
       return;
     }
     const lifetime = new AbortController();
-    let handle: ChannelManagerFormMountResultV1 | undefined;
-    void manager.mountBindingExecutionForm(props.bindingToken, target.current, {
-      signal: lifetime.signal,
-      onResult: result => {
-        if (!lifetime.signal.aborted) notifyResult(props, "policy.configure", result.status === "applied");
-      },
-    }).then(result => {
-      handle = result;
+    const handles: ChannelManagerFormMountResultV1[] = [];
+    const onResult = (result: { status: string }) => {
+      if (!lifetime.signal.aborted) notifyResult(props, "policy.configure", result.status === "applied");
+    };
+    const modelManager = props.manager as Partial<ChannelManagerV12>;
+    const mounts = [
+      manager.mountBindingExecutionForm(props.bindingToken, target.current, { signal: lifetime.signal, onResult }),
+    ];
+    if (modelsTarget.current && modelManager.mountBindingModelForm) {
+      mounts.push(
+        modelManager.mountBindingModelForm(props.bindingToken, modelsTarget.current, {
+          signal: lifetime.signal,
+          onResult,
+        }),
+      );
+    }
+    void Promise.all(mounts.map(async mount => {
+      const result = await mount;
+      handles.push(result);
       if (lifetime.signal.aborted && result.status === "mounted") result.dispose();
-      else setUnavailable(result.status !== "mounted");
+      return result;
+    })).then(results => {
+      if (!lifetime.signal.aborted) setUnavailable(results.some(result => result.status !== "mounted"));
     }).catch(() => {
       if (!lifetime.signal.aborted) setUnavailable(true);
     });
     return () => {
       lifetime.abort();
-      if (handle?.status === "mounted") handle.dispose();
+      for (const handle of handles) if (handle.status === "mounted") handle.dispose();
     };
   }, [props.manager, props.bindingToken]);
   return (
     <div className="cxc-channel-binding-execution">
       {unavailable ? <EmptyState title={copy(props.locale, "policy.unavailable")} /> : null}
+      <div ref={modelsTarget} />
       <div ref={target} />
     </div>
   );

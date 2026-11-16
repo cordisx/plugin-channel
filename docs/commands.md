@@ -5,6 +5,11 @@
 - /unbind [对话ID | --all]、/bind-status：解除／查看绑定。
 - /permissions [inherit | read-only | workspace-write | full-access] [--approval inherit|untrusted|on-request|never] [--target ID | --all]：读取／保存执行设置。
 - /work-mode [inherit | default | plan] [--effort inherit|low|medium|high|max] [--target ID | --all]：读取／保存工作模式和思考强度。
+- /models：查询当前可用的服务商与模型。
+- /model [模型] [--provider 服务商] [--effort 强度] [--target ID | --all]：查询或申请修改模型。
+- /provider [服务商] [--model 模型] [--target ID | --all]：查询或修改服务商。
+- /task-settings [--provider 服务商] [--model 模型] [--effort 强度] [--target ID | --all]：查询或修改任务参数。
+- /task-requests、/task-approve 编号、/task-deny 编号：查询、批准或拒绝一次具体模型变更。
 - /choose 选择码 all 或 序号[,序号]：继续本人的多目标操作。
 - /approvals、/approve [编号] [once | session]、/deny [编号]：原生审批。
 - /messages-on [--global]、/messages-off [--global]、/messages-status：消息投递控制。
@@ -12,3 +17,5 @@
 - /wake 前缀 [--global]、/wake --clear：唤醒词。
 
 写操作需要用户组与指令规则授权。未知指令由 Host 提示，不交给模型猜。通过运行中的精确 CLI 使用 help 操作名查看 JSON 参数；权限策略和模型目录仍由 Host 决定。
+
+模型设置需要支持 Channel Manager v12 的 Host。查询不需要修改权限；修改按用户／用户组、字段、服务商、具体模型和强度判断。有权限的用户直接修改，其他用户的请求必须由当前有相应权限的真实用户批准。一般命令批准不能代替模型权限。
