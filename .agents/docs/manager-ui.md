@@ -105,6 +105,15 @@ The Local chats tab keeps all binding operations and opens a binding through
 Host navigation without resuming a turn. Page limits bound a read, not the
 number of persistent bindings. Older Hosts retain the legacy binding body.
 
+Conversation pages first reuse the current public display catalog. The Host
+persists account-scoped names and normalized avatars across launcher restarts;
+the plugin keeps issued tokens in memory only. Visible list/detail pages
+revalidate through the existing public Manager reads after background lookup,
+periodically, and on focus. Unchanged list display preserves the existing
+items, and a failed refresh leaves the last display in place. Page disposal
+retires refresh timers and requests. Messages, permissions and binding
+operations continue to use their authoritative readback, not the display cache.
+
 The public collection snapshot contract bounds a single response to 1,000
 items; the paged conversation body uses shared Card and FilterToolbar controls
 without converting that snapshot bound into a relationship limit. Search

@@ -19,6 +19,7 @@ import { searchText } from "../presentation.js";
 import { channelPlatformIcon } from "../platform-icons.js";
 import { LegacyChannelSessions } from "./legacy-sessions.js";
 import { ChannelShell } from "../shell.js";
+import { useConversationRevalidation } from "../conversation-revalidation.js";
 
 export function ChannelSessions(props: ChannelPageProps) {
   const manager = props.manager as Partial<ChannelManagerV10>;
@@ -31,47 +32,71 @@ function ConversationList(props: ChannelPageProps & { readonly manager: ChannelM
   const { snapshot } = useChannelModel(props.manager);
   const token = routeToken(props.params.connectionToken);
   const account = accountByToken(snapshot, token);
-  const [items, setItems] = useState<readonly ChannelManagerConversationV1[]>([]);
+  const [items, setItems] = useState<readonly ChannelManagerConversationV1[]>(
+    () => props.conversations.forConnection(token),
+  );
   const [cursor, setCursor] = useState<string>();
-  const [total, setTotal] = useState(0);
+  const [total, setTotal] = useState(() => props.conversations.forConnection(token).length);
   const [complete, setComplete] = useState(true);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
   const request = useRef<AbortController | undefined>(undefined);
-  const load = async (next?: string) => {
-    if (!token) return;
+  const displayed = useRef(items);
+  displayed.current = items;
+  const load = async (next?: string, backgroundSignal?: AbortSignal) => {
+    if (!token || props.signal.aborted || backgroundSignal?.aborted || backgroundSignal && request.current) return;
     request.current?.abort();
     const lifetime = new AbortController();
+    const signal = AbortSignal.any([lifetime.signal, props.signal, ...(backgroundSignal ? [backgroundSignal] : [])]);
     request.current = lifetime;
-    setLoading(true);
+    if (!backgroundSignal) setLoading(true);
     try {
-      const page = await props.manager.conversationPage({
+      let page = await props.manager.conversationPage({
         connectionToken: token,
         limit: 100,
         ...(next === undefined ? {} : { afterCursor: next }),
-      }, lifetime.signal);
-      if (lifetime.signal.aborted) return;
-      props.conversations.adopt(page.conversations);
-      setItems(current =>
-        next
-          ? [...new Map([...current, ...page.conversations].map(item => [item.conversationToken, item])).values()]
-          : page.conversations
-      );
+      }, signal);
+      if (signal.aborted) return;
+      const conversations = [...page.conversations];
+      // Refresh every already-loaded page so its new cursor matches the current revision.
+      while (backgroundSignal && page.nextCursor && conversations.length < displayed.current.length) {
+        page = await props.manager.conversationPage({
+          connectionToken: token,
+          limit: 100,
+          afterCursor: page.nextCursor,
+        }, signal);
+        if (signal.aborted) return;
+        conversations.push(...page.conversations);
+      }
+      if (next) props.conversations.adopt(conversations);
+      else props.conversations.replaceConnection(token, conversations);
+      setItems(current => {
+        const updated = next
+          ? [...new Map([...current, ...conversations].map(item => [item.conversationToken, item])).values()]
+          : conversations;
+        return JSON.stringify(current) === JSON.stringify(updated) ? current : updated;
+      });
       setCursor(page.nextCursor);
       setTotal(page.total);
       setComplete(page.directoryComplete);
       setFailed(false);
     } catch {
-      if (!lifetime.signal.aborted) setFailed(true);
+      if (!signal.aborted && !backgroundSignal) setFailed(true);
     } finally {
-      if (!lifetime.signal.aborted) setLoading(false);
+      if (request.current === lifetime) request.current = undefined;
+      if (!signal.aborted && !backgroundSignal) setLoading(false);
     }
   };
   useEffect(() => {
+    const cached = props.conversations.forConnection(token);
+    setItems(cached);
+    setTotal(cached.length);
+    setCursor(undefined);
     void load();
     return () => request.current?.abort();
   }, [props.manager, token, snapshot.revision]);
+  useConversationRevalidation(signal => load(undefined, signal), token, props.signal, props.manager);
   const needle = searchText(query);
   const filtered = items.filter(item =>
     searchText([item.name, copy(props.locale, `conversation.kind.${item.kind}`)].join(" ")).includes(needle)

@@ -107,6 +107,10 @@ test("places each remote conversation beneath its connection and retains two det
     assert.equal(projections.length, before, "Unchanged display data must not replace the Host navigation");
     catalog.adopt([{ ...conversation, name: "新群名" }]);
     assert.equal(projections.at(-1).recordTitles.find(item => item.id === "remote-group").title.params.name, "新群名");
+    catalog.adopt([{ ...conversation, connectionToken: "another-connection", conversationToken: "other" }]);
+    catalog.replaceConnection("connection", [{ ...conversation, conversationToken: "renewed" }]);
+    assert.deepEqual(catalog.forConnection("connection").map(item => item.conversationToken), ["renewed"]);
+    assert.deepEqual(catalog.forConnection("another-connection").map(item => item.conversationToken), ["other"]);
   } finally {
     for (const dispose of effects.reverse()) dispose();
     delete globalThis.__channelTestPage;

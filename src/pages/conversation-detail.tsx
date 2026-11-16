@@ -9,6 +9,7 @@ import { bindingLabel, searchText } from "../presentation.js";
 import { ChannelShell } from "../shell.js";
 import { notifyResult } from "../notifications.js";
 import { BindingExecutionForm } from "./legacy-sessions.js";
+import { useConversationRevalidation } from "../conversation-revalidation.js";
 
 export function ChannelConversationDetail(props: ChannelPageProps) {
   const manager = props.manager as Partial<ChannelManagerV10>;
@@ -32,23 +33,34 @@ function ConversationDetail(props: ChannelPageProps & { readonly manager: Channe
   const [confirm, setConfirm] = useState<string>();
   const [executionTarget, setExecutionTarget] = useState<string>();
   const request = useRef<AbortController | undefined>(undefined);
+  useConversationRevalidation(
+    async signal => {
+      if (!token || request.current) return;
+      const detail = await props.manager.conversationDetail(token, signal);
+      if (!signal.aborted) props.conversations.adopt([detail.conversation]);
+    },
+    token,
+    props.signal,
+    props.manager,
+  );
   const load = async (next?: string) => {
-    if (!token) return;
+    if (!token || props.signal.aborted) return;
     request.current?.abort();
     const lifetime = new AbortController();
+    const signal = AbortSignal.any([lifetime.signal, props.signal]);
     request.current = lifetime;
     setLoading(true);
     try {
-      const detail = await props.manager.conversationDetail(token, lifetime.signal);
-      if (lifetime.signal.aborted) return;
+      const detail = await props.manager.conversationDetail(token, signal);
+      if (signal.aborted) return;
       props.conversations.adopt([detail.conversation]);
       if (showBindings) {
         const page = await props.manager.conversationBindings({
           conversationToken: token,
           limit: 100,
           ...(next === undefined ? {} : { afterCursor: next }),
-        }, lifetime.signal);
-        if (lifetime.signal.aborted) return;
+        }, signal);
+        if (signal.aborted) return;
         setBindings(current =>
           next
             ? [...new Map([...current, ...page.bindings].map(item => [item.bindingToken, item])).values()]
@@ -61,8 +73,8 @@ function ConversationDetail(props: ChannelPageProps & { readonly manager: Channe
           conversationToken: token,
           limit: 25,
           ...(next === undefined ? {} : { afterCursor: next }),
-        }, lifetime.signal);
-        if (lifetime.signal.aborted) return;
+        }, signal);
+        if (signal.aborted) return;
         setEntries(current =>
           next
             ? [...new Map([...current, ...page.entries].map(entry => [entry.entryId, entry])).values()]
@@ -73,9 +85,10 @@ function ConversationDetail(props: ChannelPageProps & { readonly manager: Channe
       }
       setFailed(false);
     } catch {
-      if (!lifetime.signal.aborted) setFailed(true);
+      if (!signal.aborted) setFailed(true);
     } finally {
-      if (!lifetime.signal.aborted) setLoading(false);
+      if (request.current === lifetime) request.current = undefined;
+      if (!signal.aborted) setLoading(false);
     }
   };
   useEffect(() => {
