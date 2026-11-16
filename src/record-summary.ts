@@ -3,6 +3,7 @@ import type { ManagerContentRecordSummaryV6 } from "@cordisx/protocol/manager-co
 import { copy, type CopyKey } from "./locales.js";
 import { platformLabel, stateTone } from "./presentation.js";
 import { channelPlatformIcon } from "./platform-icons.js";
+import type { ChannelManagerConversationV1 } from "@cordisx/protocol/channel-manager/v10";
 
 /** Public display data only. Host owns the summary and renders it before tabs. */
 export function channelRecordSummary(account: ChannelManagerAccountV4, locale: string): ManagerContentRecordSummaryV6 {
@@ -52,6 +53,51 @@ export function channelRecordSummary(account: ChannelManagerAccountV4, locale: s
         icon: "host:warning",
         tone: account.outbound.deadLetter > 0 ? "danger" : "neutral",
         value: account.outbound.deadLetter,
+      },
+    ],
+  };
+}
+
+export function conversationRecordSummary(
+  conversation: ChannelManagerConversationV1,
+  platform: ChannelManagerAccountV4["adapterKind"],
+  locale: string,
+): ManagerContentRecordSummaryV6 {
+  const label = (key: CopyKey) => ({ namespace: "channel", key, fallback: copy(locale, key) });
+  return {
+    leadingVisual: {
+      kind: "identity",
+      icon: channelPlatformIcon(platform),
+      ...(conversation.avatar === undefined ? {} : { avatar: conversation.avatar }),
+    },
+    title: {
+      namespace: "channel",
+      key: "record.title",
+      params: { name: conversation.name },
+      fallback: conversation.name,
+    },
+    description: label(`conversation.kind.${conversation.kind}`),
+    metrics: [
+      {
+        id: "bindings",
+        label: label("conversation.bindings"),
+        icon: "host:layers",
+        tone: "neutral",
+        value: conversation.bindingCount,
+      },
+      {
+        id: "received",
+        label: label("conversation.received"),
+        icon: "host:chat",
+        tone: "neutral",
+        value: conversation.receivedCount,
+      },
+      {
+        id: "sent",
+        label: label("conversation.sent"),
+        icon: "host:open",
+        tone: "neutral",
+        value: conversation.sentCount,
       },
     ],
   };

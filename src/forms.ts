@@ -32,7 +32,7 @@ function hostSchema(schema: Schema): SchemaFormSourceV1 {
 
 function displayName(locale: string) {
   return Schema.string().required().pattern(/\S/u)
-    .extra("extra", { label: copy(locale, "create.name") });
+    .extra("extra", { label: copy(locale, "create.name"), cordisxForm: { icon: "host:tags" } });
 }
 
 const groupMode = (locale: string) =>
@@ -40,7 +40,10 @@ const groupMode = (locale: string) =>
     (["none", "mentions", "all"] as const).map(mode =>
       Schema.const(mode).extra("extra", { label: copy(locale, `groups.${mode}`) })
     ),
-  ).required().extra("extra", { label: copy(locale, "create.groups") }).description(copy(locale, "create.groups.help"));
+  ).required().role("radio").extra("extra", {
+    label: copy(locale, "create.groups"),
+    cordisxForm: { icon: "host:files" },
+  }).description(copy(locale, "create.groups.help"));
 
 export function configurationSchema(locale: string, reception = false) {
   return hostSchema(
@@ -52,7 +55,10 @@ export function createSchema(locale: string, platforms: readonly ChannelPlatform
   return hostSchema(Schema.object({
     platform: Schema.union(
       platforms.map(platform => Schema.const(platform).extra("extra", { label: platformLabel(locale, platform) })),
-    ).required().extra("extra", { label: copy(locale, "create.platform") }),
+    ).required().role("radio").extra("extra", {
+      label: copy(locale, "create.platform"),
+      cordisxForm: { icon: "host:palette" },
+    }),
     displayName: displayName(locale),
     groupMode: groupMode(locale),
   }));

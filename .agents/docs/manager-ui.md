@@ -80,6 +80,45 @@ Public references:
 
 ## Workflow compatibility
 
+Manager v11 consolidates the settings entry in the Channels homepage's standard
+header. Four Host-rendered sibling tabs cover new-chat defaults, messages and
+replies, permission groups and rules, and sidebar grouping. Finite choices use
+the shared RadioGroup presenter, with distinct semantic field and action icons.
+Host keeps drafts across these tabs. Saving or undoing a section preserves
+the other sections' drafts, and saves merge with the latest complete policy
+under its revision fence. A concurrent change to the same section requires a
+refresh before saving.
+
+The live own-service settings destination suppresses the duplicate Host
+new-chat-default shortcut only while its route and page remain available.
+Retirement or denied rendering restores the Host fallback. Defaults continue
+to use the existing CordisX profile store; policy continues to use the existing
+Channel policy store. Older Hosts retain their original form workflow.
+See [the v11 contract](https://github.com/cordisx/cordisx-protocol/blob/main/.agents/docs/channel-runtime/manager-v11-settings.md).
+
+Manager v10 adds an explicit paged remote-conversation directory and child
+detail routes beneath the selected connection. Channel renders the public
+conversation cards with shared Host identity/search controls. Host owns the
+breadcrumb, summary and Messages / Local chats tabs. Only retained local
+transport facts appear in Messages; local Codex transcript text is never read.
+The Local chats tab keeps all binding operations and opens a binding through
+Host navigation without resuming a turn. Page limits bound a read, not the
+number of persistent bindings. Older Hosts retain the legacy binding body.
+
+Conversation pages first reuse the current public display catalog. The Host
+persists account-scoped names and normalized avatars across launcher restarts;
+the plugin keeps issued tokens in memory only. Visible list/detail pages
+revalidate through the existing public Manager reads after background lookup,
+periodically, and on focus. Unchanged list display preserves the existing
+items, and a failed refresh leaves the last display in place. Page disposal
+retires refresh timers and requests. Messages, permissions and binding
+operations continue to use their authoritative readback, not the display cache.
+
+The public collection snapshot contract bounds a single response to 1,000
+items; the paged conversation body uses shared Card and FilterToolbar controls
+without converting that snapshot bound into a relationship limit. Search
+applies to loaded pages and the displayed count makes that scope explicit.
+
 The package builds against the formal Host beta.63 UI SDK and Protocol
 beta.13. Session execution forms, progressive target commands, custom native
 approval cards and independent package documentation require the Host

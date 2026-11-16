@@ -133,8 +133,9 @@ function ConnectionLogs(
             />
           }
           actions={
-            <Stack direction="row" gap="small">
+            <>
               <Button
+                presentation="icon"
                 aria-label={copy(props.locale, "logs.refresh")}
                 title={copy(props.locale, "logs.refresh")}
                 disabled={!canQuery || loading}
@@ -143,6 +144,7 @@ function ConnectionLogs(
                 <Icon name="refresh" />
               </Button>
               <Button
+                presentation="icon"
                 aria-label={copy(props.locale, "export")}
                 title={copy(props.locale, "export")}
                 disabled={!canExport || exporting}
@@ -150,7 +152,7 @@ function ConnectionLogs(
               >
                 <Icon name="host:save" />
               </Button>
-            </Stack>
+            </>
           }
         />
         <div className="cxc-channel-results" aria-busy={loading}>

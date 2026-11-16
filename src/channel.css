@@ -7,6 +7,12 @@
   color: var(--cx-text);
 }
 
+/* List pages inherit the Host body height so only their results scroll. */
+.cxc-channel-react:has(> [data-fill="true"]) {
+  height: 100%;
+  overflow: hidden;
+}
+
 .cxc-channel-form {
   display: grid;
   align-content: start;
@@ -111,4 +117,125 @@
 .cxc-channel-binding-execution {
   flex-basis: 100%;
   min-width: 0;
+}
+
+.cxc-channel-conversation-card {
+  padding: 0;
+}
+
+.cxc-channel-conversation-open {
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 14px;
+  border: 0;
+  border-radius: inherit;
+  padding: 14px 16px;
+  background: transparent;
+  color: inherit;
+  text-align: start;
+  font: inherit;
+  cursor: pointer;
+}
+
+.cxc-channel-conversation-open:hover {
+  background: var(--cx-hover);
+}
+
+.cxc-channel-conversation-open:focus-visible,
+.cxc-channel-binding-open:focus-visible {
+  outline: 2px solid var(--cx-focus);
+  outline-offset: -2px;
+}
+
+.cxc-channel-conversation-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.cxc-channel-conversation-name {
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+.cxc-channel-conversation-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  color: var(--cx-muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.cxc-channel-conversation-meta > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cxc-channel-message {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+}
+
+.cxc-channel-message-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  color: var(--cx-muted);
+}
+
+.cxc-channel-message-copy {
+  min-width: 0;
+}
+
+.cxc-channel-message-text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.cxc-channel-binding-open {
+  min-width: 0;
+  border: 0;
+  border-radius: 6px;
+  padding: 2px 4px;
+  background: transparent;
+  color: var(--cx-text);
+  text-align: start;
+  font: inherit;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.cxc-channel-binding-open:hover:not(:disabled) {
+  color: var(--cx-primary);
+}
+
+.cxc-channel-binding-open:disabled {
+  cursor: default;
+}
+
+.cxc-channel-binding-actions {
+  display: flex;
+  margin-inline-start: auto;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+@media (width <= 700px) {
+  .cxc-channel-conversation-open {
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .cxc-channel-conversation-meta {
+    gap: 4px 10px;
+  }
 }
