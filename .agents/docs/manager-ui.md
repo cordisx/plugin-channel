@@ -80,6 +80,22 @@ Public references:
 
 ## Workflow compatibility
 
+Manager v11 consolidates the settings entry in the Channels homepage's standard
+header. Four Host-rendered sibling tabs cover new-chat defaults, messages and
+replies, permission groups and rules, and sidebar grouping. Finite choices use
+the shared RadioGroup presenter, with distinct semantic field and action icons.
+Host keeps drafts across these tabs. Saving or undoing a section preserves
+the other sections' drafts, and saves merge with the latest complete policy
+under its revision fence. A concurrent change to the same section requires a
+refresh before saving.
+
+The live own-service settings destination suppresses the duplicate Host
+new-chat-default shortcut only while its route and page remain available.
+Retirement or denied rendering restores the Host fallback. Defaults continue
+to use the existing CordisX profile store; policy continues to use the existing
+Channel policy store. Older Hosts retain their original form workflow.
+See [the v11 contract](https://github.com/cordisx/cordisx-protocol/blob/main/.agents/docs/channel-runtime/manager-v11-settings.md).
+
 Manager v10 adds an explicit paged remote-conversation directory and child
 detail routes beneath the selected connection. Channel renders the public
 conversation cards with shared Host identity/search controls. Host owns the

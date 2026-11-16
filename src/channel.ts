@@ -1,5 +1,7 @@
 import type { ChannelManagerV7 } from "@cordisx/protocol/channel-manager/v7";
 import type { ChannelManagerV10 } from "@cordisx/protocol/channel-manager/v10";
+import type { ChannelManagerV11 } from "@cordisx/protocol/channel-manager/v11";
+import { channelSettingsTabs } from "./settings.js";
 import { ChannelConversationCatalog } from "./conversation-catalog.js";
 import { conversationRecordSummary } from "./record-summary.js";
 import type { ChannelManagerV9 } from "@cordisx/protocol/channel-manager/v9";
@@ -7,6 +9,7 @@ import type { ChannelManagerV8 } from "@cordisx/protocol/channel-manager/v8";
 import type { PluginRuntimeManifestV16 } from "@cordisx/protocol/plugin-manifest/v16";
 import { withConfigurationHeader } from "./configuration-header.js";
 import type { ManagerContentNavigationDeclarationV6 } from "@cordisx/protocol/manager-content-navigation/v6";
+import type { ManagerContentNavigationDeclarationV2 } from "@cordisx/protocol/manager-content-navigation/v2";
 import { channelRecordSummary } from "./record-summary.js";
 import type { Context, Disposable } from "@deepseek-ai/cordis";
 import type { ChannelManagerV2 } from "@cordisx/protocol/channel-manager/v2";
@@ -138,6 +141,7 @@ const pages = [
   ["sessions", "route.sessions", "host:layers"],
   ["conversation-messages", "conversation.messages", "host:chat"],
   ["conversation-bindings", "conversation.bindings", "host:layers"],
+  ...channelSettingsTabs.map(tab => [tab.id, tab.title, tab.icon] as const),
 ] as const satisfies readonly (readonly [string, keyof Messages, CordisXPageMetadataV4["icon"]])[];
 
 const routes = [
@@ -160,18 +164,22 @@ const routes = [
     "conversation-bindings",
     "conversation.bindings",
   ],
+  ...channelSettingsTabs.map(tab =>
+    [tab.id, `/manager/extensions/channels/preferences/${tab.segment}`, tab.id, tab.title] as const
+  ),
 ] as const;
 
 function page(
   [id, title, icon]: typeof pages[number],
   canCreate = false,
   canConfigurePolicy = false,
+  settingsAvailable = false,
 ): CordisXPageMetadataV4 {
   return {
     $schema: CORDISX_PAGE_SCHEMA_V4,
     schemaVersion: 4,
     id,
-    title: message(title),
+    title: message(id.startsWith("preferences-") ? "settings.title" : title),
     description: message(title),
     icon,
     chrome: "standard",
@@ -180,11 +188,11 @@ function page(
         breadcrumbs: [],
         headerActions: [{
           id: "policy",
-          label: message("policy.configure"),
-          ariaLabel: message("policy.configure"),
+          label: message(settingsAvailable ? "settings.title" : "policy.configure"),
+          ariaLabel: message(settingsAvailable ? "settings.title" : "policy.configure"),
           icon: "host:settings" as const,
           command: { id: "configure-policy" },
-          disabled: { value: !canConfigurePolicy },
+          disabled: { value: !settingsAvailable && !canConfigurePolicy },
         }, {
           id: "create",
           label: message("route.create"),
@@ -223,7 +231,7 @@ function route([id, path, pageId, title]: typeof routes[number]): CordisXRouteDe
     path,
     outlet: "manager.content",
     page: pageId,
-    title: message(title),
+    title: message(id.startsWith("preferences-") ? "settings.title" : title),
     description: message(title),
   };
 }
@@ -242,8 +250,10 @@ function platformTitle(kind: string): CordisXLocalizedText {
 }
 
 function managerFor(ctx: Context): ChannelManagerV2 {
-  const manager = ctx.channelManager as Partial<ChannelManagerV10>;
-  const own = typeof manager.forOwnConversationService === "function"
+  const manager = ctx.channelManager as Partial<ChannelManagerV11>;
+  const own = typeof manager.forOwnSettingsService === "function"
+    ? manager.forOwnSettingsService()
+    : typeof manager.forOwnConversationService === "function"
     ? manager.forOwnConversationService()
     : typeof manager.forOwnWorkflowService === "function"
     ? manager.forOwnWorkflowService()
@@ -342,13 +352,17 @@ export function apply(ctx: Context): void {
   });
 
   const manager = managerFor(ctx);
+  const settingsAvailable = typeof (manager as Partial<ChannelManagerV11>).mountSettingsForm === "function";
   // beta.63's SDK predates this additive public v6 service. Use the Protocol
   // declaration only when the actual Host advertises the matching version.
   const managerContent = ctx.managerContent as typeof ctx.managerContent & {
     readonly supportedSchemaVersions?: readonly number[];
     replaceProjection(projection: {
-      readonly declarations:
-        readonly (CordisXManagerContentNavigationDeclarationV1 | ManagerContentNavigationDeclarationV6)[];
+      readonly declarations: readonly (
+        | CordisXManagerContentNavigationDeclarationV1
+        | ManagerContentNavigationDeclarationV2
+        | ManagerContentNavigationDeclarationV6
+      )[];
       readonly recordTitles: Parameters<typeof ctx.managerContent.registerRecordTitles>[0];
     }): Disposable<void | Promise<void>>;
   };
@@ -359,19 +373,36 @@ export function apply(ctx: Context): void {
     createChannelPage(manager, ctx.notifications, conversations, summaryAvailable),
   );
   for (const tuple of pages.filter(([id]) => id !== "settings")) {
+    if (tuple[0].startsWith("preferences-") && !settingsAvailable) continue;
     ctx.pages.register<Messages>(
       page(tuple),
       tuple[0] === "configuration" ? withConfigurationHeader(ctx, manager, mount) : mount,
     );
   }
-  for (const definition of routes.map(route)) ctx.routes.register(definition);
+  for (const definition of routes.map(route)) {
+    if (definition.id.startsWith("preferences-") && !settingsAvailable) continue;
+    ctx.routes.register(definition);
+  }
+  if (settingsAvailable) {
+    const destination = (manager as ChannelManagerV11).registerChatCreationSettingsDestination?.({
+      id: "preferences-defaults",
+    });
+    if (destination) ctx.effect(() => () => destination.dispose(), "channel: unified settings destination");
+  }
   ctx.commands.register({ id: "open-create", title: message("route.create") }, async ({ signal }) => {
     if (signal.aborted || availablePlatforms(manager.snapshot()).length === 0) return;
     await ctx.routes.navigate({ id: "create" });
   });
 
-  ctx.commands.register({ id: "configure-policy", title: message("policy.configure") }, async ({ signal }) => {
+  ctx.commands.register({
+    id: "configure-policy",
+    title: message(settingsAvailable ? "settings.title" : "policy.configure"),
+  }, async ({ signal }) => {
     const policyManager = manager as Partial<ChannelManagerV7>;
+    if (settingsAvailable) {
+      if (!signal.aborted) await ctx.routes.navigate({ id: "preferences-defaults" });
+      return;
+    }
     if (typeof policyManager.mountConversationReplyPolicyForm === "function") {
       if (!signal.aborted) await ctx.routes.navigate({ id: "policy" });
       return;
@@ -421,12 +452,17 @@ export function apply(ctx: Context): void {
             typeof (manager as Partial<ChannelManagerV7>).mountConversationReplyPolicyForm === "function"
               || typeof (manager as Partial<ChannelManagerV6>).configureConversationReplyPolicy === "function"
               || typeof (manager as Partial<ChannelManagerV4>).configureConversationPolicy === "function",
+            settingsAvailable,
           ),
           mount,
         );
         listCanCreate = canCreate;
       }
-      const declarations: (CordisXManagerContentNavigationDeclarationV1 | ManagerContentNavigationDeclarationV6)[] = [{
+      const declarations: (
+        | CordisXManagerContentNavigationDeclarationV1
+        | ManagerContentNavigationDeclarationV2
+        | ManagerContentNavigationDeclarationV6
+      )[] = [{
         $schema: CORDISX_MANAGER_CONTENT_NAVIGATION_SCHEMA_V1,
         schemaVersion: 1,
         id: "root",
@@ -448,6 +484,25 @@ export function apply(ctx: Context): void {
         parentRoute: { id: "settings" },
         header: { title: { kind: "route" } },
       });
+      if (settingsAvailable) {
+        const settingsTabs = channelSettingsTabs.map(tab => ({
+          id: tab.id,
+          route: { id: tab.id },
+          label: message(tab.title),
+        }));
+        for (const tab of settingsTabs) {
+          declarations.push({
+            $schema:
+              "https://raw.githubusercontent.com/cordisx/cordisx-protocol/main/schemas/manager-content-navigation.v2.schema.json",
+            schemaVersion: 2,
+            id: tab.id,
+            route: tab.route,
+            parentRoute: { id: "settings" },
+            header: { title: { kind: "route" } },
+            tabs: settingsTabs,
+          });
+        }
+      }
       const recordTitles = snapshot.accounts.map(account => ({
         id: account.connectionToken,
         title: account.displayName === undefined
