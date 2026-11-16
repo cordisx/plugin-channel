@@ -80,6 +80,20 @@ Public references:
 
 ## Workflow compatibility
 
+Manager v10 adds an explicit paged remote-conversation directory and child
+detail routes beneath the selected connection. Channel renders the public
+conversation cards with shared Host identity/search controls. Host owns the
+breadcrumb, summary and Messages / Local chats tabs. Only retained local
+transport facts appear in Messages; local Codex transcript text is never read.
+The Local chats tab keeps all binding operations and opens a binding through
+Host navigation without resuming a turn. Page limits bound a read, not the
+number of persistent bindings. Older Hosts retain the legacy binding body.
+
+The public collection snapshot contract bounds a single response to 1,000
+items; the paged conversation body uses shared Card and FilterToolbar controls
+without converting that snapshot bound into a relationship limit. Search
+applies to loaded pages and the displayed count makes that scope explicit.
+
 The package builds against the formal Host beta.63 UI SDK and Protocol
 beta.13. Session execution forms, progressive target commands, custom native
 approval cards and independent package documentation require the Host

@@ -1,4 +1,7 @@
 import type { ChannelManagerV7 } from "@cordisx/protocol/channel-manager/v7";
+import type { ChannelManagerV10 } from "@cordisx/protocol/channel-manager/v10";
+import { ChannelConversationCatalog } from "./conversation-catalog.js";
+import { conversationRecordSummary } from "./record-summary.js";
 import type { ChannelManagerV9 } from "@cordisx/protocol/channel-manager/v9";
 import type { ChannelManagerV8 } from "@cordisx/protocol/channel-manager/v8";
 import type { PluginRuntimeManifestV16 } from "@cordisx/protocol/plugin-manifest/v16";
@@ -133,6 +136,8 @@ const pages = [
   ["logs", "route.logs", "host:history"],
   ["runtime", "route.runtime", "host:open"],
   ["sessions", "route.sessions", "host:layers"],
+  ["conversation-messages", "conversation.messages", "host:chat"],
+  ["conversation-bindings", "conversation.bindings", "host:layers"],
 ] as const satisfies readonly (readonly [string, keyof Messages, CordisXPageMetadataV4["icon"]])[];
 
 const routes = [
@@ -143,6 +148,18 @@ const routes = [
   ["logs", "/manager/extensions/channels/:connectionToken/logs", "logs", "route.logs"],
   ["runtime", "/manager/extensions/channels/:connectionToken/runtime", "runtime", "route.runtime"],
   ["sessions", "/manager/extensions/channels/:connectionToken/sessions", "sessions", "route.sessions"],
+  [
+    "conversation-messages",
+    "/manager/extensions/channels/:connectionToken/conversations/:conversationToken/messages",
+    "conversation-messages",
+    "conversation.messages",
+  ],
+  [
+    "conversation-bindings",
+    "/manager/extensions/channels/:connectionToken/conversations/:conversationToken/bindings",
+    "conversation-bindings",
+    "conversation.bindings",
+  ],
 ] as const;
 
 function page(
@@ -225,8 +242,10 @@ function platformTitle(kind: string): CordisXLocalizedText {
 }
 
 function managerFor(ctx: Context): ChannelManagerV2 {
-  const manager = ctx.channelManager as Partial<ChannelManagerV9>;
-  const own = typeof manager.forOwnWorkflowService === "function"
+  const manager = ctx.channelManager as Partial<ChannelManagerV10>;
+  const own = typeof manager.forOwnConversationService === "function"
+    ? manager.forOwnConversationService()
+    : typeof manager.forOwnWorkflowService === "function"
     ? manager.forOwnWorkflowService()
     : typeof manager.forOwnConfigurationService === "function"
     ? manager.forOwnConfigurationService()
@@ -334,7 +353,11 @@ export function apply(ctx: Context): void {
     }): Disposable<void | Promise<void>>;
   };
   const summaryAvailable = managerContent.supportedSchemaVersions?.includes(6) ?? false;
-  const mount = defineReactPage<Messages>(createChannelPage(manager, ctx.notifications, summaryAvailable));
+  const conversations = new ChannelConversationCatalog();
+  ctx.effect(() => () => conversations.dispose(), "channel: conversation display lifetime");
+  const mount = defineReactPage<Messages>(
+    createChannelPage(manager, ctx.notifications, conversations, summaryAvailable),
+  );
   for (const tuple of pages.filter(([id]) => id !== "settings")) {
     ctx.pages.register<Messages>(
       page(tuple),
@@ -456,12 +479,55 @@ export function apply(ctx: Context): void {
           });
         }
       }
+      for (const conversation of conversations.all()) {
+        const account = snapshot.accounts.find(account => account.connectionToken === conversation.connectionToken);
+        if (!account) continue;
+        recordTitles.push({
+          id: conversation.conversationToken,
+          title: message("record.title", { name: conversation.name }),
+        });
+        const tabs = (["conversation-messages", "conversation-bindings"] as const).map(id => ({
+          id,
+          route: {
+            id,
+            params: {
+              connectionToken: conversation.connectionToken,
+              conversationToken: conversation.conversationToken,
+            },
+          },
+        }));
+        for (const tab of tabs) {
+          declarations.push({
+            ...(summaryAvailable
+              ? {
+                $schema:
+                  "https://raw.githubusercontent.com/cordisx/cordisx-protocol/main/schemas/manager-content-navigation.v6.schema.json" as const,
+                schemaVersion: 6 as const,
+                recordSummary: conversationRecordSummary(
+                  conversation,
+                  account.adapterKind,
+                  document.documentElement.lang || "en",
+                ),
+              }
+              : { $schema: CORDISX_MANAGER_CONTENT_NAVIGATION_SCHEMA_V1, schemaVersion: 1 as const }),
+            id: declarationId(tab.id, conversation.conversationToken),
+            route: tab.route,
+            parentRoute: { id: "sessions", params: { connectionToken: conversation.connectionToken } },
+            header: {
+              title: { kind: "record", recordIdParam: "conversationToken", fallback: message("conversations") },
+            },
+            tabs,
+          });
+        }
+      }
       disposeProjection = managerContent.replaceProjection({ declarations, recordTitles });
     };
     refresh();
     const subscription = manager.subscribe(refresh);
+    const unsubscribeConversations = conversations.subscribe(refresh);
     return () => {
       subscription.dispose();
+      unsubscribeConversations();
       void disposeProjection();
       void disposeListPage();
     };

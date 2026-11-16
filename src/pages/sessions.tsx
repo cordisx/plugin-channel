@@ -1,238 +1,191 @@
-import { Button, EmptyState, SearchField, Stack, StatusBadge } from "cordisx/ui";
+import {
+  Button,
+  Card,
+  EmptyState,
+  FilterToolbar,
+  Icon,
+  IdentityVisual,
+  SearchField,
+  Stack,
+  StatusBadge,
+  Text,
+} from "cordisx/ui";
 import { useEffect, useRef, useState } from "cordisx/react";
-import type { ChannelManagerBindingV3 } from "@cordisx/protocol/channel-manager/v2";
-import type { ChannelManagerBindingDisplayV1, ChannelManagerV9 } from "@cordisx/protocol/channel-manager/v9";
-import type { ChannelManagerFormMountResultV1 } from "@cordisx/protocol/channel-manager/v7";
-import type { ChannelManagerV4 } from "@cordisx/protocol/channel-manager/v4";
-import { bindingsForAccount, operationFence, routeToken, useChannelModel } from "../model.js";
+import type { ChannelManagerConversationV1, ChannelManagerV10 } from "@cordisx/protocol/channel-manager/v10";
+import { accountByToken, routeToken, useChannelModel } from "../model.js";
 import type { ChannelPageProps } from "../page-types.js";
 import { copy } from "../locales.js";
-import { bindingLabel, searchText } from "../presentation.js";
-import { notifyResult } from "../notifications.js";
+import { searchText } from "../presentation.js";
+import { channelPlatformIcon } from "../platform-icons.js";
+import { LegacyChannelSessions } from "./legacy-sessions.js";
 import { ChannelShell } from "../shell.js";
 
 export function ChannelSessions(props: ChannelPageProps) {
-  const { manager, snapshot } = useChannelModel(props.manager);
+  const manager = props.manager as Partial<ChannelManagerV10>;
+  return typeof manager.conversationPage === "function"
+    ? <ConversationList {...props} manager={manager as ChannelManagerV10} />
+    : <LegacyChannelSessions {...props} />;
+}
+
+function ConversationList(props: ChannelPageProps & { readonly manager: ChannelManagerV10 }) {
+  const { snapshot } = useChannelModel(props.manager);
   const token = routeToken(props.params.connectionToken);
-  const [loaded, setLoaded] = useState<readonly (ChannelManagerBindingV3 | ChannelManagerBindingDisplayV1)[]>();
-  const [executionTarget, setExecutionTarget] = useState<string>();
-  const [nextCursor, setNextCursor] = useState<string>();
+  const account = accountByToken(snapshot, token);
+  const [items, setItems] = useState<readonly ChannelManagerConversationV1[]>([]);
+  const [cursor, setCursor] = useState<string>();
+  const [total, setTotal] = useState(0);
+  const [complete, setComplete] = useState(true);
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
-  const pageLifetime = useRef<AbortController | undefined>(undefined);
-  const pageManager = manager as Partial<ChannelManagerV9>;
-  const bindings = loaded ?? (token === undefined ? [] : bindingsForAccount(snapshot, token));
-  const [query, setQuery] = useState("");
-  const [busy, setBusy] = useState<string>();
-  const [confirm, setConfirm] = useState<string>();
-  const needle = searchText(query);
-
-  useEffect(() => {
-    setLoaded(undefined);
-    setNextCursor(undefined);
-    if (!token || typeof pageManager.bindingPage !== "function") return;
+  const request = useRef<AbortController | undefined>(undefined);
+  const load = async (next?: string) => {
+    if (!token) return;
+    request.current?.abort();
     const lifetime = new AbortController();
-    pageLifetime.current = lifetime;
+    request.current = lifetime;
     setLoading(true);
-    setFailed(false);
-    const read = pageManager.bindingDisplayPage?.bind(pageManager) ?? pageManager.bindingPage.bind(pageManager);
-    void read({ connectionToken: token, limit: 100 }, lifetime.signal).then(page => {
+    try {
+      const page = await props.manager.conversationPage({
+        connectionToken: token,
+        limit: 100,
+        ...(next === undefined ? {} : { afterCursor: next }),
+      }, lifetime.signal);
       if (lifetime.signal.aborted) return;
-      setLoaded(page.bindings);
-      setNextCursor(page.nextCursor);
-    }).catch(() => {
-      if (!lifetime.signal.aborted) setFailed(true);
-    })
-      .finally(() => {
-        if (!lifetime.signal.aborted) setLoading(false);
-      });
-    return () => {
-      lifetime.abort();
-      if (pageLifetime.current === lifetime) pageLifetime.current = undefined;
-    };
-  }, [manager, token, snapshot.revision]);
-
-  const more = async () => {
-    if (loading || !token || !nextCursor || typeof pageManager.bindingPage !== "function") return;
-    const lifetime = pageLifetime.current;
-    if (!lifetime || lifetime.signal.aborted) return;
-    setLoading(true);
-    try {
-      const read = pageManager.bindingDisplayPage?.bind(pageManager) ?? pageManager.bindingPage.bind(pageManager);
-      const page = await read(
-        { connectionToken: token, afterCursor: nextCursor, limit: 100 },
-        lifetime.signal,
+      props.conversations.adopt(page.conversations);
+      setItems(current =>
+        next
+          ? [...new Map([...current, ...page.conversations].map(item => [item.conversationToken, item])).values()]
+          : page.conversations
       );
-      if (lifetime.signal.aborted || lifetime !== pageLifetime.current) return;
-      setLoaded(current => [...(current ?? []), ...page.bindings]);
-      setNextCursor(page.nextCursor);
+      setCursor(page.nextCursor);
+      setTotal(page.total);
+      setComplete(page.directoryComplete);
+      setFailed(false);
     } catch {
-      if (!lifetime.signal.aborted && lifetime === pageLifetime.current) setFailed(true);
+      if (!lifetime.signal.aborted) setFailed(true);
     } finally {
-      if (!lifetime.signal.aborted && lifetime === pageLifetime.current) setLoading(false);
+      if (!lifetime.signal.aborted) setLoading(false);
     }
   };
-  const filtered = bindings.filter(binding =>
-    searchText([
-      "sessionName" in binding ? binding.sessionName : "",
-      "conversationName" in binding ? binding.conversationName : "",
-      bindingLabel(props.locale, binding.state),
-      binding.state,
-    ].join(" ")).includes(needle)
+  useEffect(() => {
+    void load();
+    return () => request.current?.abort();
+  }, [props.manager, token, snapshot.revision]);
+  const needle = searchText(query);
+  const filtered = items.filter(item =>
+    searchText([item.name, copy(props.locale, `conversation.kind.${item.kind}`)].join(" ")).includes(needle)
   );
-
-  const run = async (
-    binding: typeof bindings[number],
-    operation: "binding.archive" | "binding.restore" | "binding.unbind",
-  ) => {
-    if (busy !== undefined || !binding.availableOperations.includes(operation)) return;
-    setBusy(binding.bindingToken);
-    try {
-      const result = await manager.execute({
-        ...operationFence(snapshot),
-        operation,
-        target: {
-          kind: "binding",
-          bindingToken: binding.bindingToken,
-          bindingRevision: binding.bindingRevision,
-        },
-      });
-      notifyResult(props, operation, result.status === "applied");
-      if (result.status === "applied") setConfirm(undefined);
-    } catch {
-      notifyResult(props, operation, false);
-    } finally {
-      setBusy(undefined);
-    }
-  };
-
   return (
     <ChannelShell status="implemented">
-      <Stack fill gap="small" data-channel-page="detail" data-channel-detail={token}>
-        <SearchField
-          value={query}
-          onChange={setQuery}
-          clearable
-          clearLabel={copy(props.locale, "search.clear")}
-          placeholder={copy(props.locale, "search.bindings")}
-          aria-label={copy(props.locale, "search.bindings")}
+      <Stack fill gap="small" data-channel-conversations={token}>
+        <FilterToolbar
+          aria-label={copy(props.locale, "conversations")}
+          search={
+            <SearchField
+              value={query}
+              onChange={setQuery}
+              clearable
+              clearLabel={copy(props.locale, "search.clear")}
+              placeholder={copy(props.locale, "search.conversations")}
+              aria-label={copy(props.locale, "search.conversations")}
+            />
+          }
+          actions={
+            <Button
+              presentation="icon"
+              disabled={loading}
+              aria-label={copy(props.locale, "conversation.refresh")}
+              title={copy(props.locale, "conversation.refresh")}
+              onClick={() => void load()}
+            >
+              <Icon name="refresh" />
+            </Button>
+          }
         />
-        <div className="cxc-channel-results">
+        <div className="cxc-channel-results" aria-busy={loading}>
+          {filtered.map(item => (
+            <Card key={item.conversationToken} as="article" className="cxc-channel-conversation-card">
+              <button
+                type="button"
+                className="cxc-channel-conversation-open"
+                onClick={() =>
+                  void props.navigation.navigate({
+                    id: "conversation-messages",
+                    params: { connectionToken: item.connectionToken, conversationToken: item.conversationToken },
+                  })}
+              >
+                <IdentityVisual
+                  icon={channelPlatformIcon(account?.adapterKind ?? "feishu")}
+                  {...(item.avatar === undefined ? {} : { avatar: item.avatar })}
+                />
+                <Stack gap="small" className="cxc-channel-conversation-copy">
+                  <Stack direction="row" align="center" wrap gap="small">
+                    <Text as="span" className="cxc-channel-conversation-name">{item.name}</Text>
+                    <StatusBadge tone="neutral">{copy(props.locale, `conversation.kind.${item.kind}`)}</StatusBadge>
+                  </Stack>
+                  <div className="cxc-channel-conversation-meta">
+                    <span>
+                      <Icon name="relationship" />
+                      {copy(props.locale, "conversation.bindings")} {item.bindingCount.toLocaleString(props.locale)}
+                    </span>
+                    <span>
+                      <Icon name="host:chat" />
+                      {copy(props.locale, "conversation.received")} {item.receivedCount.toLocaleString(props.locale)}
+                    </span>
+                    <span>
+                      <Icon name="host:open" />
+                      {copy(props.locale, "conversation.sent")} {item.sentCount.toLocaleString(props.locale)}
+                    </span>
+                    {item.lastActivityAt
+                      ? (
+                        <time dateTime={item.lastActivityAt}>
+                          {new Date(item.lastActivityAt).toLocaleString(props.locale, {
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </time>
+                      )
+                      : null}
+                  </div>
+                </Stack>
+                <Icon name="host:chevron-right" />
+              </button>
+            </Card>
+          ))}
           {filtered.length === 0
             ? (
               <EmptyState
                 title={copy(
                   props.locale,
-                  failed ? "logs.failed" : loading
-                    ? "logs.loading"
-                    : needle === ""
-                    ? "sessions.empty"
-                    : "sessions.no-match",
+                  loading
+                    ? "conversation.loading"
+                    : failed
+                    ? "conversation.failed"
+                    : items.length === 0
+                    ? "conversations.empty"
+                    : "conversations.no-match",
                 )}
               />
             )
-            : filtered.map(binding => (
-              <article key={binding.bindingToken} className="cxc-channel-binding">
-                <span className="cxc-channel-binding-copy">
-                  <StatusBadge tone={binding.state === "active" ? "success" : "neutral"}>
-                    {bindingLabel(props.locale, binding.state)}
-                  </StatusBadge>
-                  <span className="cxc-channel-session-token">
-                    {"sessionName" in binding && typeof binding.sessionName === "string"
-                      ? binding.sessionName
-                      : copy(props.locale, "binding.session")}
-                  </span>
-                  {"conversationName" in binding && typeof binding.conversationName === "string"
-                    ? <span>{binding.conversationName}</span>
-                    : null}
-                </span>
-                <span className="cxc-channel-actions">
-                  {pageManager.mountBindingExecutionForm
-                    ? (
-                      <Button
-                        variant="secondary"
-                        onClick={() =>
-                          setExecutionTarget(current =>
-                            current === binding.bindingToken ? undefined : binding.bindingToken
-                          )}
-                      >
-                        {props.locale.startsWith("zh") ? "执行设置" : "Execution settings"}
-                      </Button>
-                    )
-                    : null}
-                  {binding.availableOperations.map(operation => (
-                    <Button
-                      key={operation}
-                      variant={operation === "binding.unbind" ? "danger" : "secondary"}
-                      disabled={busy !== undefined}
-                      onClick={() => {
-                        if (operation === "binding.unbind" && confirm !== binding.bindingToken) {
-                          setConfirm(binding.bindingToken);
-                        } else void run(binding, operation);
-                      }}
-                    >
-                      {copy(
-                        props.locale,
-                        operation === "binding.unbind" && confirm === binding.bindingToken
-                          ? "binding.confirm-unbind"
-                          : operation,
-                      )}
-                    </Button>
-                  ))}
-                  {confirm === binding.bindingToken
-                    ? (
-                      <Button variant="ghost" disabled={busy !== undefined} onClick={() => setConfirm(undefined)}>
-                        {copy(props.locale, "cancel")}
-                      </Button>
-                    )
-                    : null}
-                </span>
-                {executionTarget === binding.bindingToken
-                  ? <BindingExecutionForm {...props} bindingToken={binding.bindingToken} />
-                  : null}
-              </article>
-            ))}
-          {nextCursor
-            ? <Button disabled={loading} onClick={() => void more()}>{copy(props.locale, "logs.load-more")}</Button>
             : null}
         </div>
+        <Stack direction="row" align="center" justify="space-between" gap="small">
+          <Text tone="muted">
+            {copy(props.locale, complete ? "conversation.loaded" : "conversation.partial")}{" "}
+            {items.length.toLocaleString(props.locale)} / {total.toLocaleString(props.locale)}
+          </Text>
+          {cursor
+            ? (
+              <Button disabled={loading} onClick={() => void load(cursor)}>
+                {copy(props.locale, "logs.load-more")}
+              </Button>
+            )
+            : null}
+        </Stack>
       </Stack>
     </ChannelShell>
-  );
-}
-
-function BindingExecutionForm(props: ChannelPageProps & { readonly bindingToken: string }) {
-  const target = useRef<HTMLDivElement>(null);
-  const [unavailable, setUnavailable] = useState(false);
-  useEffect(() => {
-    const manager = props.manager as Partial<ChannelManagerV9>;
-    if (!target.current || !manager.mountBindingExecutionForm) {
-      setUnavailable(true);
-      return;
-    }
-    const lifetime = new AbortController();
-    let handle: ChannelManagerFormMountResultV1 | undefined;
-    void manager.mountBindingExecutionForm(props.bindingToken, target.current, {
-      signal: lifetime.signal,
-      onResult: result => {
-        if (!lifetime.signal.aborted) notifyResult(props, "policy.configure", result.status === "applied");
-      },
-    }).then(result => {
-      handle = result;
-      if (lifetime.signal.aborted && result.status === "mounted") result.dispose();
-      else setUnavailable(result.status !== "mounted");
-    }).catch(() => {
-      if (!lifetime.signal.aborted) setUnavailable(true);
-    });
-    return () => {
-      lifetime.abort();
-      if (handle?.status === "mounted") handle.dispose();
-    };
-  }, [props.manager, props.bindingToken]);
-  return (
-    <div className="cxc-channel-binding-execution">
-      {unavailable ? <EmptyState title={copy(props.locale, "policy.unavailable")} /> : null}
-      <div ref={target} />
-    </div>
   );
 }
