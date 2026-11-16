@@ -14,7 +14,9 @@ Channel 连接飞书等消息平台。登录和连接凭据由 CordisX 管理；
 
 ## 让一个 Codex 对话监听多个会话
 
-先用运行窗口对应的 Channel CLI 查询 connections 和 conversations，选择实际账号与私聊或群聊。使用 bind 把当前 Codex 对话绑定为 listen，之后通过 history 检索已保留消息；deliver 把定向消息交给模型。一个 Codex 对话可以监听多个群，一个群也可以绑定多个 Codex 对话，没有持久绑定数量上限。不要猜账号或会话 ID。
+先用运行窗口对应的 Channel CLI 查询 connections 和 conversations，选择实际账号与私聊或群聊。使用 bind 把当前 Codex 对话绑定为 listen，之后通过 history 检索绑定后已接收且被接受的本地消息；deliver 把定向消息交给模型。若 Host 支持 remote-history，可指定账号、会话、时间范围和分页读取远端消息；群历史不保证展开所有话题回复。一个 Codex 对话可以监听多个群，一个群也可以绑定多个 Codex 对话，没有持久绑定数量上限。不要猜账号或会话 ID。
+
+远端历史依赖同一机器人应用的消息读取权限；权限不足会返回明确错误，不自动切换账号。使用 CLI 的 help remote-history 查看参数和分页；[Host Channel 指南](https://github.com/cordisx/cordisx/blob/main/.agents/docs/channel-cli.md)说明授权步骤及官方 Lark CLI／Skill 联动。
 
 ## 回复和主动发送
 
