@@ -209,7 +209,7 @@ function page(
           id: "connection-toggle",
           label: message("connection.disable"),
           ariaLabel: message("connection.disable"),
-          presentation: "text" as const,
+          icon: "host:log-in" as const,
           command: { id: "toggle-connection" },
         }, {
           id: "connection-reconnect",
