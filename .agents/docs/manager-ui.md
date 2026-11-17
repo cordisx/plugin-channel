@@ -131,10 +131,12 @@ items; the paged conversation body uses shared Card and FilterToolbar controls
 without converting that snapshot bound into a relationship limit. Search
 applies to loaded pages and the displayed count makes that scope explicit.
 
-The package builds against the formal Host beta.63 UI SDK and the exact
-merged Protocol source `52f4016addd281284a82e4c53d04578dd337be31`.
-That source contains the v13 contract; npm Protocol beta.15 does not acquire
-it from the package version alone. Session execution forms, progressive target
+The package builds against the Host beta.67 UI SDK and the exact merged Protocol
+source `be1e7fcb49c730c5806db6ca1925958804288674`. That source contains the
+v14 continuation form contract; the earlier npm Protocol beta.15 does not acquire
+it from the package version alone. The existing settings navigation adds a
+Continuation tab and mounts the Host form when available; older Hosts show the
+unavailable state. Session execution forms, progressive target
 commands, custom native
 approval cards and independent package documentation require the Host
 implementation of Manager v9 and the linked workflow contracts; an older

@@ -4,7 +4,7 @@ import { apply } from "../dist/channel.js";
 import { channelSettingsSection, channelSettingsTabs } from "../dist/settings.js";
 
 for (const supportsModels of [false, true]) {
-  test(`one Settings entry opens ${supportsModels ? "five v12" : "four legacy"} Host tabs and retires its destination`, async () => {
+  test(`one Settings entry opens ${supportsModels ? "six v12" : "five legacy"} Host tabs and retires its destination`, async () => {
     const previousDocument = globalThis.document;
     globalThis.document = { documentElement: { lang: "zh-CN" } };
     const effects = [], projections = [], navigation = [], pages = new Map(), routes = new Map(), commands = new Map();
@@ -57,7 +57,7 @@ for (const supportsModels of [false, true]) {
       await commands.get("configure-policy")({ signal: new AbortController().signal });
       assert.deepEqual(navigation, [{ id: "preferences-defaults" }]);
       const declarations = projections.at(-1).declarations.filter(item => item.id.startsWith("preferences-"));
-      assert.equal(declarations.length, supportsModels ? 5 : 4);
+      assert.equal(declarations.length, supportsModels ? 6 : 5);
       const supportedTabs = channelSettingsTabs.filter(tab => tab.id !== "preferences-models" || supportsModels);
       assert.equal(pages.has("preferences-models"), supportsModels);
       assert.equal(routes.has("preferences-models"), supportsModels);

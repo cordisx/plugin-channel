@@ -1,8 +1,13 @@
-import type { ChannelManagerV13 } from "@cordisx/protocol/channel-manager/v13";
-import type { ChannelSettingsFormSectionV2 } from "@cordisx/protocol/channel-manager/v12";
+import type { ChannelManagerV14 } from "@cordisx/protocol/channel-manager/v14";
+import type { ChannelSettingsSection } from "./settings.js";
 
 /** New Hosts expose a Channel overlay; frozen v11-v12 Hosts retain the general-default form. */
-export function channelSettingsFormMount(manager: Partial<ChannelManagerV13>, section: ChannelSettingsFormSectionV2) {
+export function channelSettingsFormMount(manager: Partial<ChannelManagerV14>, section: ChannelSettingsSection) {
+  if (section === "continuation") {
+    return typeof manager.mountContinuationDefaultsForm === "function"
+      ? manager.mountContinuationDefaultsForm.bind(manager)
+      : undefined;
+  }
   if (section === "new-chats" && typeof manager.mountChannelCreationDefaultsForm === "function") {
     return manager.mountChannelCreationDefaultsForm.bind(manager);
   }

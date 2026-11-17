@@ -1,6 +1,6 @@
 {
   "name": "@cordisx/channel",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "private": true,
   "description": "CordisX channel management plugin",
   "license": "AGPL-3.0-or-later",
@@ -45,22 +45,22 @@
   },
   "devDependencies": {
     "@cordisx/eslint-config": "github:cordisx/cordisxmono#c63c2e8c2ba7e11502934a52ad2ce3734e804cdc",
-    "@cordisx/protocol": "github:cordisx/cordisx-protocol#52f4016addd281284a82e4c53d04578dd337be31",
-    "@projectwallace/stylelint-plugin": "0.7.0",
+    "@cordisx/protocol": "github:cordisx/cordisx-protocol#be1e7fcb49c730c5806db6ca1925958804288674",
     "@deepseek-ai/cordis": "4.0.1",
     "@deepseek-ai/schemastery": "3.18.2",
+    "@projectwallace/stylelint-plugin": "0.7.0",
     "@typescript-eslint/parser": "8.69.0",
     "ajv": "8.20.0",
     "ajv-formats": "3.0.1",
+    "cordisx": "0.1.0-beta.67",
     "dprint": "0.57.1",
+    "esbuild": "0.28.2",
     "eslint": "9.39.4",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "stylelint": "17.15.0",
     "stylelint-config-standard": "40.0.0",
-    "typescript": "5.9.2",
-    "cordisx": "0.1.0-beta.67",
-    "esbuild": "0.28.2",
-    "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "typescript": "5.9.2"
   },
   "repository": {
     "type": "git",
