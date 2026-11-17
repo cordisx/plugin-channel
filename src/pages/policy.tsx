@@ -1,4 +1,5 @@
-import type { ChannelManagerV12, ChannelSettingsFormSectionV2 } from "@cordisx/protocol/channel-manager/v12";
+import type { ChannelSettingsFormSectionV2 } from "@cordisx/protocol/channel-manager/v12";
+import type { ChannelManagerV13 } from "@cordisx/protocol/channel-manager/v13";
 import type { ChannelManagerFormMountResultV1 } from "@cordisx/protocol/channel-manager/v7";
 import { useEffect, useRef, useState } from "cordisx/react";
 import { EmptyState } from "cordisx/ui";
@@ -6,21 +7,23 @@ import type { ChannelPageProps } from "../page-types.js";
 import { copy } from "../locales.js";
 import { notifyResult } from "../notifications.js";
 import { ChannelShell } from "../shell.js";
+import { channelSettingsFormMount } from "../settings-form.js";
 
 export function ChannelPolicy(props: ChannelPageProps & { readonly settingsSection?: ChannelSettingsFormSectionV2 }) {
   const target = useRef<HTMLDivElement>(null);
   const defaults = useRef<HTMLDivElement>(null);
   const [unavailable, setUnavailable] = useState(false);
   useEffect(() => {
-    const manager = props.manager as Partial<ChannelManagerV12>;
+    const manager = props.manager as Partial<ChannelManagerV13>;
     if (props.settingsSection) {
-      if (!target.current || typeof manager.mountSettingsForm !== "function") {
+      const mount = channelSettingsFormMount(manager, props.settingsSection);
+      if (!target.current || !mount) {
         setUnavailable(true);
         return;
       }
       const lifetime = new AbortController();
       let handle: ChannelManagerFormMountResultV1 | undefined;
-      void manager.mountSettingsForm(props.settingsSection, target.current, {
+      void mount(target.current, {
         signal: lifetime.signal,
         onResult: result => {
           if (!lifetime.signal.aborted) notifyResult(props, "settings.title", result.status === "applied");
