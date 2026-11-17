@@ -89,11 +89,12 @@ the other sections' drafts, and saves merge with the latest complete policy
 under its revision fence. A concurrent change to the same section requires a
 refresh before saving.
 
-The live own-service settings destination suppresses the duplicate Host
-new-chat-default shortcut only while its route and page remain available.
-Retirement or denied rendering restores the Host fallback. Defaults continue
-to use the existing CordisX profile store; policy continues to use the existing
-Channel policy store. Older Hosts retain their original form workflow.
+Before v13 adoption, the live own-service settings destination suppressed the
+duplicate Host new-chat-default shortcut while its route and page were
+available, restoring the fallback on retirement or denied rendering. Those
+Hosts edit the existing CordisX profile defaults; policy uses the separate
+Channel policy store. The v13 Host implementation below keeps the general
+entry independent. Older Hosts retain their original form workflow.
 See [the v11 contract](https://github.com/cordisx/cordisx-protocol/blob/main/.agents/docs/channel-runtime/manager-v11-settings.md).
 
 On Manager v13 Hosts, the new-chat tab uses the public
@@ -130,8 +131,11 @@ items; the paged conversation body uses shared Card and FilterToolbar controls
 without converting that snapshot bound into a relationship limit. Search
 applies to loaded pages and the displayed count makes that scope explicit.
 
-The package builds against the formal Host beta.63 UI SDK and Protocol
-beta.13. Session execution forms, progressive target commands, custom native
+The package builds against the formal Host beta.63 UI SDK and the exact
+merged Protocol source `52f4016addd281284a82e4c53d04578dd337be31`.
+That source contains the v13 contract; npm Protocol beta.15 does not acquire
+it from the package version alone. Session execution forms, progressive target
+commands, custom native
 approval cards and independent package documentation require the Host
 implementation of Manager v9 and the linked workflow contracts; an older
 Host does not acquire those features by installing this plugin. New methods
