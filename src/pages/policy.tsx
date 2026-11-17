@@ -1,5 +1,4 @@
-import type { ChannelSettingsFormSectionV2 } from "@cordisx/protocol/channel-manager/v12";
-import type { ChannelManagerV13 } from "@cordisx/protocol/channel-manager/v13";
+import type { ChannelManagerV14 } from "@cordisx/protocol/channel-manager/v14";
 import type { ChannelManagerFormMountResultV1 } from "@cordisx/protocol/channel-manager/v7";
 import { useEffect, useRef, useState } from "cordisx/react";
 import { EmptyState } from "cordisx/ui";
@@ -8,13 +7,14 @@ import { copy } from "../locales.js";
 import { notifyResult } from "../notifications.js";
 import { ChannelShell } from "../shell.js";
 import { channelSettingsFormMount } from "../settings-form.js";
+import type { ChannelSettingsSection } from "../settings.js";
 
-export function ChannelPolicy(props: ChannelPageProps & { readonly settingsSection?: ChannelSettingsFormSectionV2 }) {
+export function ChannelPolicy(props: ChannelPageProps & { readonly settingsSection?: ChannelSettingsSection }) {
   const target = useRef<HTMLDivElement>(null);
   const defaults = useRef<HTMLDivElement>(null);
   const [unavailable, setUnavailable] = useState(false);
   useEffect(() => {
-    const manager = props.manager as Partial<ChannelManagerV13>;
+    const manager = props.manager as Partial<ChannelManagerV14>;
     if (props.settingsSection) {
       const mount = channelSettingsFormMount(manager, props.settingsSection);
       if (!target.current || !mount) {

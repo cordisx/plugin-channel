@@ -13,13 +13,23 @@ test("Channel new-chat tab uses the overlay form while other tabs and older Host
       assert.equal(this, manager);
       calls.push(["channel", ...args]);
     },
+    mountContinuationDefaultsForm(...args) {
+      assert.equal(this, manager);
+      calls.push(["continuation", ...args]);
+    },
   };
   await channelSettingsFormMount(manager, "new-chats")(target, options);
   await channelSettingsFormMount(manager, "messages")(target, options);
-  assert.deepEqual(calls, [["channel", target, options], ["general", "messages", target, options]]);
+  await channelSettingsFormMount(manager, "continuation")(target, options);
+  assert.deepEqual(calls, [["channel", target, options], ["general", "messages", target, options], [
+    "continuation",
+    target,
+    options,
+  ]]);
   const legacyCalls = [];
   const legacy = { mountSettingsForm: (...args) => legacyCalls.push(args) };
   await channelSettingsFormMount(legacy, "new-chats")(target, options);
   assert.deepEqual(legacyCalls, [["new-chats", target, options]]);
   assert.equal(channelSettingsFormMount({}, "new-chats"), undefined);
+  assert.equal(channelSettingsFormMount(legacy, "continuation"), undefined);
 });
