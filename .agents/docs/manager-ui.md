@@ -96,6 +96,17 @@ to use the existing CordisX profile store; policy continues to use the existing
 Channel policy store. Older Hosts retain their original form workflow.
 See [the v11 contract](https://github.com/cordisx/cordisx-protocol/blob/main/.agents/docs/channel-runtime/manager-v11-settings.md).
 
+On Manager v13 Hosts, the new-chat tab uses the public
+`mountChannelCreationDefaultsForm` instead. General profile defaults are the
+base; the independent Channel layer overrides only explicit fields, while
+missing/`inherit` fields and later general-default changes flow through to
+new Channel tasks. Explicit false remains an override. Existing tasks and
+ordinary chats are unaffected by changes to the Channel layer. Narrower
+task-model rules keep precedence. Frozen v11-v12 Hosts keep their original
+general-default form; the plugin detects the method and never writes a private
+Host store. The general Host default entry is independent of the Channel tab.
+See [the v13 contract](https://github.com/cordisx/cordisx-protocol/blob/main/.agents/docs/channel-runtime/manager-v13-creation-defaults.md).
+
 Manager v10 adds an explicit paged remote-conversation directory and child
 detail routes beneath the selected connection. Channel renders the public
 conversation cards with shared Host identity/search controls. Host owns the
