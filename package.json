@@ -1,6 +1,6 @@
 {
   "name": "@cordisx/channel",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "private": true,
   "description": "CordisX channel management plugin",
   "license": "AGPL-3.0-or-later",
@@ -45,7 +45,7 @@
   },
   "devDependencies": {
     "@cordisx/eslint-config": "github:cordisx/cordisxmono#c63c2e8c2ba7e11502934a52ad2ce3734e804cdc",
-    "@cordisx/protocol": "github:cordisx/cordisx-protocol#be1e7fcb49c730c5806db6ca1925958804288674",
+    "@cordisx/protocol": "github:cordisx/cordisx-protocol#53e16025c26ae20ff3e7ba5f9d4b2c7af469807b",
     "@deepseek-ai/cordis": "4.0.1",
     "@deepseek-ai/schemastery": "3.18.2",
     "@projectwallace/stylelint-plugin": "0.7.0",

@@ -32,7 +32,11 @@ export function channelRecordSummary(account: ChannelManagerAccountV4, locale: s
       },
       {
         id: "configuration",
-        label: label(`configuration.${account.configurationState}`),
+        label: label(
+          account.lastErrorCode === "TENANT_IDENTIFICATION_PENDING"
+            ? "configuration.tenant-pending"
+            : `configuration.${account.configurationState}`,
+        ),
         icon: "host:key",
         tone: account.configurationState === "ready" ? "neutral" : "warning",
       },

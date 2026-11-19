@@ -81,6 +81,24 @@ test("returns complete selected views and echoes the exact Host Unicode search f
   }
 });
 
+test("identifies pending tenant connections and keeps their configuration route available", () => {
+  const fixture = managerFixture([{
+    ...accounts[0],
+    connectionState: "unavailable",
+    configurationState: "incomplete",
+    lastErrorCode: "TENANT_IDENTIFICATION_PENDING",
+  }]);
+  const source = new ChannelCollectionSource(fixture.manager, "zh-CN");
+  try {
+    const item = source.snapshot(query(), new AbortController().signal).items[0];
+    assert.equal(item.summary.fallback, "飞书 · 待识别租户 ID");
+    assert.equal(item.disabled.value, false);
+    assert.equal(item.route.id, "configuration");
+  } finally {
+    source.dispose();
+  }
+});
+
 test("keeps all bilingual registrations and public snapshots valid against published schemas", async () => {
   const ajv = new Ajv({ strict: false });
   for (

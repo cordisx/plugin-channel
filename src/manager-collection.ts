@@ -141,7 +141,9 @@ export class ChannelCollectionSource implements ManagerCollectionSourceV1 {
     const items = accounts.map((account, order): ManagerCollectionItem => {
       const platform = platformLabel(this.locale, account.adapterKind);
       const name = publicName(account.displayName ?? account.accountName ?? platform);
-      const state = stateLabel(this.locale, account.connectionState);
+      const state = account.lastErrorCode === "TENANT_IDENTIFICATION_PENDING"
+        ? copy(this.locale, "configuration.tenant-pending")
+        : stateLabel(this.locale, account.connectionState);
       return {
         id: account.connectionToken,
         title: { namespace: "channel", key: "record.title", params: { name }, fallback: name },
