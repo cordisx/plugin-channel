@@ -7,7 +7,7 @@ transport.
 
 ## Install
 
-Plugin ID: `channel`. Current release: `0.1.6`.
+Plugin ID: `channel`. Current release: `0.1.7`.
 
 The CordisX Community Marketplace feed must already be configured and enabled
 before `--source` can select it:
@@ -15,7 +15,7 @@ before `--source` can select it:
 ```sh
 FEED_URL=https://raw.githubusercontent.com/cordisx/marketplace/main/marketplace.json
 npx cordisx@beta source add "$FEED_URL" --yes
-npx cordisx@beta plugin install channel --source "$FEED_URL" --version 0.1.6
+npx cordisx@beta plugin install channel --source "$FEED_URL" --version 0.1.7
 ```
 
 Skip `source add` when that exact feed is already enabled. For another profile,
@@ -24,8 +24,8 @@ the source change only; it does not approve plugin permissions. A discovery
 source is not a trust root.
 
 The install command becomes available after the Marketplace entry lists the
-`0.1.6` artifact. Until then, download the archive and `SHA256SUMS` from the
-[GitHub release](https://github.com/cordisx/plugin-channel/releases/tag/v0.1.6).
+`0.1.7` artifact. Until then, download the archive and `SHA256SUMS` from the
+[GitHub release](https://github.com/cordisx/plugin-channel/releases/tag/v0.1.7).
 
 ## Use
 
@@ -74,7 +74,7 @@ unavailable operations stay disabled rather than falling back to private APIs.
 
 ## Troubleshooting
 
-- **Install cannot find version `0.1.6`:** confirm the Marketplace entry lists
+- **Install cannot find version `0.1.7`:** confirm the Marketplace entry lists
   the release artifact. `--source` does not add or repair a feed.
 - **No accounts appear:** confirm the Host supports `channel-manager/v5` and
   the Channel service is active in the selected profile.

@@ -40,6 +40,10 @@ ask 的输入包括 account、target、question、options（每项为 label 和 
 
 私聊的定向消息可以自动创建 Codex 对话。群接收模式支持仅 @ 和接收全部；接收全部也不会自动回复闲聊，@、配置的唤醒前缀或明确命令决定是否交给模型。允许／拒绝规则支持全局及账号、会话、群／私聊、用户或用户组交集，拒绝优先。
 
+支持管理员配对的 Host 可以由本机用户发起一次短时配对：先在本机运行 `cordisx channel help admin-pair-begin`，选择已识别租户且运行中的飞书／Lark 连接，再将生成的 `/pair` 配对码私聊机器人。本机通过 `admin-pair-status` 核对账号、用户、私聊和命令权限后，使用 `admin-pair-confirm` 明确确认，或用 `admin-pair-cancel` 取消。配对码只使用一次、五分钟内有效；请勿发到群里或交给其他人。
+
+该授权只覆盖确认的用户、机器人、租户及私聊中的管理指令，不自动授予任务触发或全局策略权限；原有拒绝规则仍生效。群里 @ 机器人发送 `/pair` 或提交被任务策略拒绝的定向请求时，符合接收与发送规则才可能收到私聊引导，并有频率限制；已获准的任务请求仍按原策略处理。平台需要订阅 `im.message.receive_v1`、开通私聊与发送权限，群引导还需要群 @ 事件权限，并发布应用版本；[Host 指南](https://github.com/cordisx/cordisx/blob/main/.agents/docs/channel-cli.md#pair-a-direct-chat-administrator)列出准确权限和参数。插件文档不会为旧 Host 增加此功能；如果 `help admin-pair-begin` 不可用，需要等待包含该功能的 Host 版本。
+
 新建任务默认放在“外部连接”分组，可在消息规则页修改。标题使用平台加私聊用户或群名；没有目录权限时先显示私聊／群聊占位，后续刷新。用户手动改名、移动后不自动覆盖。
 
 ## 执行设置与权限审批
