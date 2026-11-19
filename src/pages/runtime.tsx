@@ -62,7 +62,9 @@ export function ChannelRuntime(props: ChannelPageProps) {
               {
                 id: "configuration",
                 label: copy(props.locale, "status.configuration"),
-                value: configurationLabel(props.locale, account.configurationState),
+                value: account.lastErrorCode === "TENANT_IDENTIFICATION_PENDING"
+                  ? copy(props.locale, "configuration.tenant-pending")
+                  : configurationLabel(props.locale, account.configurationState),
               },
               ...queueItems,
             ]}

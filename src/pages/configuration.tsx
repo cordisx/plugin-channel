@@ -36,7 +36,9 @@ export function ChannelConfiguration(props: ChannelPageProps) {
     return (
       <ChannelShell status={account.implementationStatus}>
         <ChannelConnectionConfigurationForm
-          key={account.connectionToken}
+          key={`${account.connectionToken}:${
+            account.lastErrorCode === "TENANT_IDENTIFICATION_PENDING" ? "pending" : "resolved"
+          }`}
           {...props}
           connectionToken={account.connectionToken}
         />
