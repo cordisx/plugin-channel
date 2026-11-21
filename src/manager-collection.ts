@@ -14,6 +14,7 @@ import { copy, type CopyKey } from "./locales.js";
 import { stateLabel } from "./model.js";
 import { platformLabel } from "./presentation.js";
 import { channelPlatformIcon } from "./platform-icons.js";
+import { snapshotOnlyPresentation } from "./presentation-capabilities.js";
 
 const COLLECTION_ID = "connections";
 const STATES = ["ready", "starting", "retrying", "disabled", "stopped", "unavailable"] as const;
@@ -75,7 +76,12 @@ export class ChannelCollectionSource implements ManagerCollectionSourceV1 {
   private readonly lifetime = new AbortController();
   private refreshTimer: ReturnType<typeof setTimeout> | undefined;
 
-  constructor(private readonly manager: ChannelManagerV2, private readonly locale: string, identity = false) {
+  constructor(
+    private readonly manager: ChannelManagerV2,
+    private readonly locale: string,
+    identity = false,
+    private readonly snapshotOnly = snapshotOnlyPresentation(manager),
+  ) {
     this.subscription = manager.subscribe(() => {
       if (this.disposed) return;
       this.revision += 1;
@@ -154,7 +160,10 @@ export class ChannelCollectionSource implements ManagerCollectionSourceV1 {
           fallback: `${platform} · ${state}`,
         },
         leadingVisual: { kind: "semantic-icon", icon: "host:layers" },
-        route: { id: "configuration", params: { connectionToken: account.connectionToken } },
+        route: {
+          id: this.snapshotOnly ? "runtime" : "configuration",
+          params: { connectionToken: account.connectionToken },
+        },
         order,
         disabled: { value: false },
         actions: [],
@@ -195,9 +204,10 @@ export function registerChannelCollection(
   registry: ManagerCollectionRegistryV1 & Partial<Pick<ManagerCollectionRegistryV2, "registerV2">>,
   manager: ChannelManagerV2,
   locale: string,
+  snapshotOnly = snapshotOnlyPresentation(manager),
 ) {
   const identity = typeof registry.registerV2 === "function";
-  const source = new ChannelCollectionSource(manager, locale, identity);
+  const source = new ChannelCollectionSource(manager, locale, identity, snapshotOnly);
   try {
     const handle = registry.registerV2 === undefined
       ? registry.register(channelCollectionRegistration(locale), source)
