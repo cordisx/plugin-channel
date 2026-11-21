@@ -25,6 +25,9 @@ await build({
   format: "esm",
   loader: { ".css": "text" },
   metafile: true,
+  // Module-boundary comments can contain the real path of a symlinked build
+  // dependency. Keep the legacy bundle portable across build machines.
+  minifyWhitespace: true,
   outfile: "dist/channel.js",
   platform: "browser",
   sourcemap: false,

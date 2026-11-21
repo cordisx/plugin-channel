@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
+import { homedir } from "node:os";
 import { test } from "node:test";
 import Ajv2020 from "ajv/dist/2020.js";
 import addFormats from "ajv-formats";
@@ -50,6 +51,20 @@ test("keeps source, runtime manifest, and bundled module identity aligned", asyn
   assert.equal(packageManifest.version, npmManifest.version);
   await readFile(new URL(`..${packageManifest.entry.slice(1)}`, import.meta.url));
   await readFile(new URL(`..${declared.services[0].entry.slice(1)}`, import.meta.url));
+});
+
+test("keeps build-machine paths out of the legacy module", async () => {
+  const module = await readFile(new URL("../dist/channel.js", import.meta.url), "utf8");
+  const home = homedir().replaceAll("\\", "/");
+  // esbuild otherwise emits real paths for symlinked dependencies as comments.
+  if (home.length > 1) {
+    assert.equal(module.includes(home), false, "the bundle contains the build user's home directory");
+  }
+  assert.equal(
+    /^\/\/ (?:\.\.\/|\/|[A-Za-z]:[\\/])/mu.test(module),
+    false,
+    "the bundle contains an external source path comment",
+  );
 });
 
 test("ships the selected brand PNG unchanged through the public module icon", async () => {
