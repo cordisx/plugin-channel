@@ -1,6 +1,8 @@
 const EN = {
   "operation.saved": "Operation completed.",
   "operation.failed": "Operation failed. Check the connection and try again.",
+  "operation.configuration-unavailable":
+    "Configuration is temporarily unavailable. Your draft was kept; check other Manager windows or clients, then try again.",
   accounts: "Channel connections",
   "accounts.description": "Manage external messaging connections.",
   "accounts.empty": "No channel connections yet.",
@@ -140,6 +142,7 @@ export type CopyKey = keyof typeof EN;
 const ZH: Record<CopyKey, string> = {
   "operation.saved": "操作已完成",
   "operation.failed": "操作未完成，请检查连接后重试",
+  "operation.configuration-unavailable": "配置暂时不可写，草稿已保留；请检查其他管理窗口或客户端后重试。",
   accounts: "渠道连接",
   "accounts.description": "管理外部消息服务的连接。",
   "accounts.empty": "暂无渠道连接",

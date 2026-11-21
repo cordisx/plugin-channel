@@ -45,6 +45,13 @@ export function ChannelConfiguration(props: ChannelPageProps) {
       </ChannelShell>
     );
   }
+  if (props.configurationOnly) {
+    return (
+      <ChannelShell status="unavailable">
+        <EmptyState title={copy(props.locale, "credential.unavailable")} />
+      </ChannelShell>
+    );
+  }
   return <ConnectionConfiguration key={account.connectionToken} {...props} account={account} snapshot={snapshot} />;
 }
 

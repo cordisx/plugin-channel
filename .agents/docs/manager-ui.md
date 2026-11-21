@@ -69,6 +69,13 @@ they do not authorize operations. A Host that advertises an invalid or failed
 descriptor is treated as snapshot-only. Hosts without the additive entrypoint
 retain their existing behavior, including their own feature checks.
 
+The proposed v16 configuration facade is requested separately and must return
+its exact `configuration-only` descriptor and the v8 Host form before Channel
+shows configuration. In this mode only the list, configuration and runtime
+routes are registered; creation, connection controls, policy, logs and sessions
+remain hidden. A pending identity without a usable form opens runtime status.
+Invalid descriptors fail closed, and an older v15 facade remains read-only.
+
 The v15 specification and Host implementation are separate pending changes;
 this compatibility path does not imply that either is merged, published, or
 available in an installed Host. The plugin continues building against its

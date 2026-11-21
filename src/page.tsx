@@ -17,6 +17,7 @@ export function createChannelPage(
   conversations: ChannelConversationCatalog,
   summaryAvailable = false,
   snapshotOnly = false,
+  configurationOnly = false,
 ) {
   return function ChannelPage(props: CordisXReactPageProps) {
     const shared = {
@@ -25,6 +26,7 @@ export function createChannelPage(
       notifications,
       summaryAvailable,
       snapshotOnly,
+      configurationOnly,
       conversations,
       locale: props.localization.getSnapshot().locale,
     };

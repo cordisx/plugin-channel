@@ -89,6 +89,149 @@ test("snapshot-only presentation registers only read-only account status surface
   assert.equal(listeners.size, 0);
 });
 
+test("configuration-only presentation exposes the existing form and status without unrelated controls", () => {
+  const priorDocument = globalThis.document;
+  globalThis.document = { documentElement: { lang: "en" } };
+  const pages = new Map(), routes = new Map(), commands = new Map(), projections = [], effects = [];
+  const accounts = [
+    {
+      connectionToken: "ready",
+      adapterKind: "simulator",
+      connectionState: "ready",
+      availableOperations: ["connection.update"],
+    },
+    {
+      connectionToken: "pending",
+      adapterKind: "feishu",
+      connectionState: "unavailable",
+      lastErrorCode: "TENANT_IDENTIFICATION_PENDING",
+      availableOperations: [],
+    },
+  ];
+  const facade = {
+    configurationPresentationCapabilities: () => ({
+      contract: "cordisx.channel-manager-configuration-presentation-capabilities/v1",
+      schemaVersion: 1,
+      mode: "configuration-only",
+    }),
+    mountConnectionConfigurationForm() {},
+    mountSettingsForm() {},
+    snapshot: () => ({ accounts, bindings: [], availableOperations: ["target.connection.create.simulator"] }),
+    subscribe: () => ({ dispose() {} }),
+  };
+  const manager = {
+    forOwnConfigurationPresentationService: () => facade,
+    forOwnPresentationService: () => {
+      throw new Error("wrong facade");
+    },
+  };
+  const ctx = {
+    i18n: { define() {} },
+    notifications: {},
+    channelManager: manager,
+    pages: {
+      register: metadata => {
+        pages.set(metadata.id, metadata);
+        return () => pages.delete(metadata.id);
+      },
+    },
+    routes: { register: metadata => routes.set(metadata.id, metadata) },
+    commands: { register: metadata => commands.set(metadata.id, metadata) },
+    managerContent: {
+      replaceProjection: projection => {
+        projections.push(projection);
+        return () => {};
+      },
+    },
+    effect: setup => effects.push(setup()),
+    slots: { register() {} },
+  };
+  try {
+    apply(ctx);
+    assert.deepEqual([...routes.keys()].sort(), ["configuration", "runtime", "settings"]);
+    assert.deepEqual([...pages.keys()].sort(), ["configuration", "runtime", "settings"]);
+    assert.deepEqual(pages.get("settings").headerActions, []);
+    assert.equal(pages.get("configuration").headerActions, undefined);
+    assert.deepEqual([...commands.keys()], []);
+    const declarations = projections.at(-1).declarations;
+    const ready = declarations.find(item => item.route.id === "configuration");
+    assert.deepEqual(ready.tabs.map(tab => tab.id), ["configuration", "runtime"]);
+    const pending = declarations.find(item =>
+      item.route.id === "runtime" && item.route.params.connectionToken === "pending"
+    );
+    assert.deepEqual(pending.tabs.map(tab => tab.id), ["runtime"]);
+  } finally {
+    for (const dispose of effects.reverse()) dispose();
+    globalThis.document = priorDocument;
+  }
+});
+
+test("configuration capability validation fails closed on incomplete or malformed facades", async () => {
+  const { configurationOnlyPresentation } = await import("../dist/presentation-capabilities.js");
+  const valid = {
+    configurationPresentationCapabilities: () => ({
+      contract: "cordisx.channel-manager-configuration-presentation-capabilities/v1",
+      schemaVersion: 1,
+      mode: "configuration-only",
+    }),
+    snapshot() {},
+    subscribe() {},
+    mountConnectionConfigurationForm() {},
+  };
+  assert.equal(configurationOnlyPresentation(valid), true);
+  assert.equal(configurationOnlyPresentation({ ...valid, mountConnectionConfigurationForm: undefined }), false);
+  assert.equal(
+    configurationOnlyPresentation({ ...valid, configurationPresentationCapabilities: () => ({ mode: "standard" }) }),
+    false,
+  );
+  assert.equal(
+    configurationOnlyPresentation({
+      ...valid,
+      configurationPresentationCapabilities() {
+        throw new Error("retired");
+      },
+    }),
+    false,
+  );
+});
+
+test("an invalid configuration facade cannot fall back to standard controls", () => {
+  const pages = new Map(), routes = new Map(), commands = new Map(), effects = [];
+  const old = {
+    presentationCapabilities: () => ({
+      contract: "cordisx.channel-manager-presentation-capabilities/v1",
+      schemaVersion: 1,
+      mode: "standard",
+    }),
+    snapshot: () => ({ accounts: [], availableOperations: ["target.connection.create.simulator"] }),
+    subscribe: () => ({ dispose() {} }),
+  };
+  const ctx = {
+    i18n: { define() {} },
+    notifications: {},
+    channelManager: { forOwnConfigurationPresentationService: () => ({}), forOwnPresentationService: () => old },
+    pages: {
+      register: metadata => {
+        pages.set(metadata.id, metadata);
+        return () => pages.delete(metadata.id);
+      },
+    },
+    routes: { register: metadata => routes.set(metadata.id, metadata) },
+    commands: { register: metadata => commands.set(metadata.id, metadata) },
+    managerContent: { replaceProjection: () => () => {} },
+    effect: setup => effects.push(setup()),
+    slots: { register() {} },
+  };
+  try {
+    apply(ctx);
+    assert.deepEqual([...routes.keys()].sort(), ["runtime", "settings"]);
+    assert.deepEqual(pages.get("settings").headerActions, []);
+    assert.deepEqual([...commands.keys()], []);
+  } finally {
+    for (const dispose of effects.reverse()) dispose();
+  }
+});
+
 test("unknown or failing presentation capabilities fail closed while missing v15 preserves older Hosts", async () => {
   const { snapshotOnlyPresentation } = await import("../dist/presentation-capabilities.js");
   assert.equal(snapshotOnlyPresentation({}), false);

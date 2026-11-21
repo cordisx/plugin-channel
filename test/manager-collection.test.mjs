@@ -116,6 +116,21 @@ test("identifies pending tenant connections and keeps their configuration route 
   }
 });
 
+test("configuration-only presentation routes a pending identity to status", () => {
+  const fixture = managerFixture([{
+    ...accounts[0],
+    connectionState: "unavailable",
+    configurationState: "incomplete",
+    lastErrorCode: "TENANT_IDENTIFICATION_PENDING",
+  }]);
+  const source = new ChannelCollectionSource(fixture.manager, "en", false, false, true);
+  try {
+    assert.equal(source.snapshot(query(), new AbortController().signal).items[0].route.id, "runtime");
+  } finally {
+    source.dispose();
+  }
+});
+
 test("keeps all bilingual registrations and public snapshots valid against published schemas", async () => {
   const ajv = new Ajv({ strict: false });
   for (

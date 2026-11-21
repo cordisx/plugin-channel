@@ -81,6 +81,7 @@ export class ChannelCollectionSource implements ManagerCollectionSourceV1 {
     private readonly locale: string,
     identity = false,
     private readonly snapshotOnly = snapshotOnlyPresentation(manager),
+    private readonly configurationOnly = false,
   ) {
     this.subscription = manager.subscribe(() => {
       if (this.disposed) return;
@@ -161,7 +162,9 @@ export class ChannelCollectionSource implements ManagerCollectionSourceV1 {
         },
         leadingVisual: { kind: "semantic-icon", icon: "host:layers" },
         route: {
-          id: this.snapshotOnly ? "runtime" : "configuration",
+          id: this.snapshotOnly || this.configurationOnly && account.lastErrorCode === "TENANT_IDENTIFICATION_PENDING"
+            ? "runtime"
+            : "configuration",
           params: { connectionToken: account.connectionToken },
         },
         order,
@@ -205,9 +208,10 @@ export function registerChannelCollection(
   manager: ChannelManagerV2,
   locale: string,
   snapshotOnly = snapshotOnlyPresentation(manager),
+  configurationOnly = false,
 ) {
   const identity = typeof registry.registerV2 === "function";
-  const source = new ChannelCollectionSource(manager, locale, identity, snapshotOnly);
+  const source = new ChannelCollectionSource(manager, locale, identity, snapshotOnly, configurationOnly);
   try {
     const handle = registry.registerV2 === undefined
       ? registry.register(channelCollectionRegistration(locale), source)

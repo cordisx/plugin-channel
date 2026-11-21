@@ -17,7 +17,9 @@ export function ChannelConnectionConfigurationForm(props: ChannelPageProps & { r
     void manager.mountConnectionConfigurationForm(props.connectionToken, target.current, {
       signal: lifetime.signal,
       onResult: result => {
-        if (!lifetime.signal.aborted) notifyResult(props, "connection.update", result.status === "applied");
+        if (!lifetime.signal.aborted) {
+          notifyResult(props, "connection.update", result.status === "applied", result.code);
+        }
       },
     }).then(result => {
       handle = result;

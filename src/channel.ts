@@ -2,7 +2,7 @@ import type { ChannelManagerV7 } from "@cordisx/protocol/channel-manager/v7";
 import type { ChannelManagerV10 } from "@cordisx/protocol/channel-manager/v10";
 import type { ChannelManagerV12 } from "@cordisx/protocol/channel-manager/v12";
 import type { ChannelManagerV11 } from "@cordisx/protocol/channel-manager/v11";
-import { snapshotOnlyPresentation } from "./presentation-capabilities.js";
+import { configurationOnlyPresentation, snapshotOnlyPresentation } from "./presentation-capabilities.js";
 import { channelSettingsTabs } from "./settings.js";
 import { ChannelConversationCatalog } from "./conversation-catalog.js";
 import { conversationRecordSummary } from "./record-summary.js";
@@ -206,7 +206,7 @@ function page(
         }],
       }
       : {}),
-    ...(id === "configuration"
+    ...(id === "configuration" && !snapshotOnly
       ? {
         headerActions: [{
           id: "connection-toggle",
@@ -252,10 +252,30 @@ function platformTitle(kind: string): CordisXLocalizedText {
   return message("record.title", { name: kind });
 }
 
-function managerFor(ctx: Context): { readonly manager: ChannelManagerV2; readonly mustNegotiate: boolean } {
+function managerFor(ctx: Context): {
+  readonly manager: ChannelManagerV2;
+  readonly mode: "standard" | "snapshot-only" | "configuration-only";
+} {
   const manager = ctx.channelManager as Partial<ChannelManagerV11>;
   const advertised = "forOwnPresentationService" in manager;
   let own: ChannelManagerV2 | undefined;
+  let invalidConfigurationFacade = false;
+  try {
+    const getConfiguration: unknown = Reflect.get(manager, "forOwnConfigurationPresentationService");
+    if (typeof getConfiguration === "function") {
+      const configuration: unknown = getConfiguration.call(manager);
+      if (configuration !== undefined) {
+        if (configurationOnlyPresentation(configuration)) {
+          return { manager: configuration, mode: "configuration-only" };
+        }
+        invalidConfigurationFacade = true;
+      }
+    } else if (getConfiguration !== undefined) {
+      invalidConfigurationFacade = true;
+    }
+  } catch {
+    invalidConfigurationFacade = true;
+  }
   try {
     const getPresentation: unknown = Reflect.get(manager, "forOwnPresentationService");
     own = advertised && typeof getPresentation === "function"
@@ -281,11 +301,14 @@ function managerFor(ctx: Context): { readonly manager: ChannelManagerV2; readonl
     own = undefined;
   }
   if (own && typeof own.snapshot === "function" && typeof own.subscribe === "function") {
-    return { manager: own, mustNegotiate: advertised };
+    return {
+      manager: own,
+      mode: invalidConfigurationFacade || snapshotOnlyPresentation(own, advertised) ? "snapshot-only" : "standard",
+    };
   }
   // Older Hosts or an inactive service must not manufacture a delegated grant.
   return {
-    mustNegotiate: advertised,
+    mode: advertised || invalidConfigurationFacade ? "snapshot-only" : "standard",
     manager: {
       snapshot: () => ({
         contract: "cordisx.channel-runtime-snapshot/v3",
@@ -372,10 +395,12 @@ export function apply(ctx: Context): void {
 
   const selected = managerFor(ctx);
   const manager = selected.manager;
-  const snapshotOnly = snapshotOnlyPresentation(manager, selected.mustNegotiate);
-  const settingsAvailable = !snapshotOnly
+  const snapshotOnly = selected.mode === "snapshot-only";
+  const configurationOnly = selected.mode === "configuration-only";
+  const restricted = selected.mode !== "standard";
+  const settingsAvailable = !restricted
     && typeof (manager as Partial<ChannelManagerV11>).mountSettingsForm === "function";
-  const modelsAvailable = !snapshotOnly
+  const modelsAvailable = !restricted
     && typeof (manager as Partial<ChannelManagerV12>).mountBindingModelForm === "function";
   const supportedSettingsTabs = channelSettingsTabs.filter(tab => tab.id !== "preferences-models" || modelsAvailable);
   // beta.63's SDK predates this additive public v6 service. Use the Protocol
@@ -395,20 +420,23 @@ export function apply(ctx: Context): void {
   const conversations = new ChannelConversationCatalog();
   ctx.effect(() => () => conversations.dispose(), "channel: conversation display lifetime");
   const mount = defineReactPage<Messages>(
-    createChannelPage(manager, ctx.notifications, conversations, summaryAvailable, snapshotOnly),
+    createChannelPage(manager, ctx.notifications, conversations, summaryAvailable, snapshotOnly, configurationOnly),
   );
   for (const tuple of pages.filter(([id]) => id !== "settings")) {
-    if (snapshotOnly && tuple[0] !== "runtime") continue;
+    if (restricted && tuple[0] !== "runtime" && !(configurationOnly && tuple[0] === "configuration")) continue;
     if (
       tuple[0].startsWith("preferences-") && !settingsAvailable || tuple[0] === "preferences-models" && !modelsAvailable
     ) continue;
     ctx.pages.register<Messages>(
-      page(tuple),
-      tuple[0] === "configuration" ? withConfigurationHeader(ctx, manager, mount) : mount,
+      page(tuple, false, false, false, restricted),
+      tuple[0] === "configuration" && !restricted ? withConfigurationHeader(ctx, manager, mount) : mount,
     );
   }
   for (const definition of routes.map(route)) {
-    if (snapshotOnly && definition.id !== "settings" && definition.id !== "runtime") continue;
+    if (
+      restricted && definition.id !== "settings" && definition.id !== "runtime"
+      && !(configurationOnly && definition.id === "configuration")
+    ) continue;
     if (
       definition.id.startsWith("preferences-") && !settingsAvailable
       || definition.id === "preferences-models" && !modelsAvailable
@@ -421,7 +449,7 @@ export function apply(ctx: Context): void {
     });
     if (destination) ctx.effect(() => () => destination.dispose(), "channel: unified settings destination");
   }
-  if (!snapshotOnly) {
+  if (!restricted) {
     ctx.commands.register({ id: "open-create", title: message("route.create") }, async ({ signal }) => {
       if (signal.aborted || availablePlatforms(manager.snapshot()).length === 0) {
         return;
@@ -430,7 +458,7 @@ export function apply(ctx: Context): void {
     });
   }
 
-  if (!snapshotOnly) {
+  if (!restricted) {
     ctx.commands.register({
       id: "configure-policy",
       title: message(settingsAvailable ? "settings.title" : "policy.configure"),
@@ -480,7 +508,7 @@ export function apply(ctx: Context): void {
         summaryAvailable && "snapshotWithIdentity" in manager && typeof manager.snapshotWithIdentity === "function"
           ? (manager as ChannelManagerV7).snapshotWithIdentity()
           : manager.snapshot();
-      const canCreate = !snapshotOnly && availablePlatforms(snapshot).length > 0;
+      const canCreate = !restricted && availablePlatforms(snapshot).length > 0;
       if (listCanCreate !== canCreate) {
         void disposeListPage();
         disposeListPage = ctx.pages.register<Messages>(
@@ -491,7 +519,7 @@ export function apply(ctx: Context): void {
               || typeof (manager as Partial<ChannelManagerV6>).configureConversationReplyPolicy === "function"
               || typeof (manager as Partial<ChannelManagerV4>).configureConversationPolicy === "function",
             settingsAvailable,
-            snapshotOnly,
+            restricted,
           ),
           mount,
         );
@@ -508,7 +536,7 @@ export function apply(ctx: Context): void {
         route: { id: "settings" },
         header: { title: { kind: "route" } },
       }];
-      if (!snapshotOnly) {
+      if (!restricted) {
         declarations.push({
           $schema: CORDISX_MANAGER_CONTENT_NAVIGATION_SCHEMA_V1,
           schemaVersion: 1,
@@ -551,9 +579,12 @@ export function apply(ctx: Context): void {
           : message("record.title", { name: account.displayName }),
       }));
       for (const account of snapshot.accounts) {
-        const visibleTabs = snapshotOnly
-          ? ["runtime"] as const
-          : ["configuration", "runtime", "logs", "sessions"] as const;
+        const visibleTabs =
+          snapshotOnly || configurationOnly && account.lastErrorCode === "TENANT_IDENTIFICATION_PENDING"
+            ? ["runtime"] as const
+            : configurationOnly
+            ? ["configuration", "runtime"] as const
+            : ["configuration", "runtime", "logs", "sessions"] as const;
         const tabs = visibleTabs.map(id => ({
           id,
           route: { id, params: { connectionToken: account.connectionToken } },
@@ -578,7 +609,7 @@ export function apply(ctx: Context): void {
           });
         }
       }
-      for (const conversation of snapshotOnly ? [] : conversations.all()) {
+      for (const conversation of restricted ? [] : conversations.all()) {
         const account = snapshot.accounts.find(account => account.connectionToken === conversation.connectionToken);
         if (!account) continue;
         recordTitles.push({
