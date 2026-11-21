@@ -1,5 +1,7 @@
 import type { ReactNode } from "cordisx/react";
-import styles from "./channel.css";
+import styles from "./channel.css?inline";
+
+declare const __CORDISX_GRAPH_STYLES__: boolean | undefined;
 
 export function ChannelShell(props: {
   readonly children: ReactNode;
@@ -11,7 +13,7 @@ export function ChannelShell(props: {
       data-channel-manager="mounted"
       data-channel-status={props.status}
     >
-      <style>{styles}</style>
+      {typeof __CORDISX_GRAPH_STYLES__ !== "undefined" && __CORDISX_GRAPH_STYLES__ ? null : <style>{styles}</style>}
       {props.children}
     </section>
   );

@@ -1,5 +1,7 @@
 import { build } from "esbuild";
 import { copyFile } from "node:fs/promises";
+import { build as viteBuild } from "vite";
+import { cordisXPluginViteConfig } from "cordisx/vite";
 
 await build({
   bundle: true,
@@ -27,6 +29,19 @@ await build({
   platform: "browser",
   sourcemap: false,
   target: ["chrome120"],
+  define: { __CORDISX_GRAPH_STYLES__: "false" },
+});
+
+const graph = cordisXPluginViteConfig({
+  root: process.cwd(),
+  entry: "./src/channel-graph.ts",
+  outDir: "./dist/browser",
+  entryFileName: "module.js",
+});
+await viteBuild({
+  ...graph,
+  configFile: false,
+  define: { ...graph.define, __CORDISX_GRAPH_STYLES__: "true" },
 });
 
 await copyFile("src/service.mjs", "dist/service.mjs");
