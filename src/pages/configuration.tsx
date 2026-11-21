@@ -48,7 +48,7 @@ export function ChannelConfiguration(props: ChannelPageProps) {
   if (props.configurationOnly) {
     return (
       <ChannelShell status="unavailable">
-        <EmptyState title={copy(props.locale, "credential.unavailable")} />
+        <EmptyState title={copy(props.locale, "configuration.form-unavailable")} />
       </ChannelShell>
     );
   }
