@@ -6,8 +6,10 @@ import { test } from "node:test";
 test("the indexed browser graph keeps Channel styles in verified initial resources", async () => {
   const root = new URL("../dist/browser/", import.meta.url);
   const artifact = JSON.parse(await readFile(new URL("artifact.json", root), "utf8"));
+  const descriptor = JSON.parse(await readFile(new URL("../cordisx-package.json", import.meta.url), "utf8"));
   assert.equal(artifact.contract, "cordisx.plugin-generation-artifact/v1");
   assert.equal(artifact.entry, "./module.js");
+  assert.equal(descriptor.entry, "./dist/browser/module.js");
   assert.equal(artifact.initialStyles.length, 1);
   const sheet = artifact.files.find(file => file.path === artifact.initialStyles[0]);
   assert.equal(sheet?.kind, "stylesheet");
@@ -16,7 +18,9 @@ test("the indexed browser graph keeps Channel styles in verified initial resourc
   assert.match(css.toString("utf8"), /\.cxc-channel-react\s*\{/);
   assert.match(css.toString("utf8"), /display\s*:\s*flex/);
   const graphModule = await readFile(new URL(artifact.entry, root), "utf8");
-  assert.doesNotMatch(graphModule, /\.cxc-channel-react\s*\{/);
+  // The same entry retains a fallback for older Hosts that bundle it as an IIFE.
+  assert.ok(/\.cxc-channel-react\s*\{/.test(graphModule), "graph retains the embedded Host CSS fallback");
+  assert.ok(graphModule.includes("import.meta.url"), "graph can distinguish native module loading");
   const legacyModule = await readFile(new URL("../dist/channel.js", import.meta.url), "utf8");
   assert.match(legacyModule, /\.cxc-channel-react\s*\{/);
   assert.match(legacyModule, /jsx\d*\("style"/);

@@ -41,7 +41,10 @@ const graph = cordisXPluginViteConfig({
 await viteBuild({
   ...graph,
   configFile: false,
-  define: { ...graph.define, __CORDISX_GRAPH_STYLES__: "true" },
+  // Native module loading owns the indexed stylesheet. An older Host that
+  // bundles this entry into an IIFE has no import.meta URL and uses the inline
+  // fallback. The separate legacy entry above always keeps that fallback.
+  define: { ...graph.define, __CORDISX_GRAPH_STYLES__: "Boolean(import.meta.url)" },
 });
 
 await copyFile("src/service.mjs", "dist/service.mjs");

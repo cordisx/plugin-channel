@@ -17,6 +17,10 @@ try {
   const module = execFileSync("tar", ["-xOf", archive, "package/dist/channel.js"], { encoding: "utf8" });
   assert.equal(module, await readFile(new URL("../dist/channel.js", import.meta.url), "utf8"));
   const artifact = JSON.parse(await readFile(new URL("../dist/browser/artifact.json", import.meta.url), "utf8"));
+  const descriptor = JSON.parse(
+    execFileSync("tar", ["-xOf", archive, "package/cordisx-package.json"], { encoding: "utf8" }),
+  );
+  assert.equal(descriptor.entry, `./dist/browser/${artifact.entry.slice(2)}`);
   for (const file of ["artifact.json", ...artifact.files.map(item => item.path.slice(2))]) {
     assert.deepEqual(
       execFileSync("tar", ["-xOf", archive, `package/dist/browser/${file}`]),
