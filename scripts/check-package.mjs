@@ -16,6 +16,17 @@ try {
   assert.deepEqual(platform, await readFile(new URL("../assets/platforms/feishu.png", import.meta.url)));
   const module = execFileSync("tar", ["-xOf", archive, "package/dist/channel.js"], { encoding: "utf8" });
   assert.equal(module, await readFile(new URL("../dist/channel.js", import.meta.url), "utf8"));
+  const artifact = JSON.parse(await readFile(new URL("../dist/browser/artifact.json", import.meta.url), "utf8"));
+  const descriptor = JSON.parse(
+    execFileSync("tar", ["-xOf", archive, "package/cordisx-package.json"], { encoding: "utf8" }),
+  );
+  assert.equal(descriptor.entry, `./dist/browser/${artifact.entry.slice(2)}`);
+  for (const file of ["artifact.json", ...artifact.files.map(item => item.path.slice(2))]) {
+    assert.deepEqual(
+      execFileSync("tar", ["-xOf", archive, `package/dist/browser/${file}`]),
+      await readFile(new URL(`../dist/browser/${file}`, import.meta.url)),
+    );
+  }
   for (const file of ["cordisx-documents.json", "docs/usage.md", "docs/commands.md", "docs/troubleshooting.md"]) {
     assert.equal(
       execFileSync("tar", ["-xOf", archive, `package/${file}`], { encoding: "utf8" }),

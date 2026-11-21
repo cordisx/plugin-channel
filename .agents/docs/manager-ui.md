@@ -58,6 +58,22 @@ collection handle and its Channel subscription. A failed registration also
 disposes its source. An older Host without `managerCollection` gets an honest
 unavailable state rather than a private renderer fallback.
 
+## Snapshot-only presentation candidate
+
+The proposed Channel Manager v15 own-service presentation descriptor can
+identify a snapshot-only Host. In that mode Channel registers only the
+connection list and runtime-status routes, directs connection rows to status,
+and omits settings, creation, configuration, logs, conversation and binding
+controls. The existing snapshot and local subscription still drive the list;
+they do not authorize operations. A Host that advertises an invalid or failed
+descriptor is treated as snapshot-only. Hosts without the additive entrypoint
+retain their existing behavior, including their own feature checks.
+
+The v15 specification and Host implementation are separate pending changes;
+this compatibility path does not imply that either is merged, published, or
+available in an installed Host. The plugin continues building against its
+current locked Protocol version while feature-detecting the proposed entrypoint.
+
 On a Host advertising `managerCollection.registerV2`, the source supplies the
 generic identity visual: the bundled platform icon, or authenticated account
 artwork with the platform icon in its lower-right corner. It reads account

@@ -81,6 +81,23 @@ test("returns complete selected views and echoes the exact Host Unicode search f
   }
 });
 
+test("snapshot-only account rows navigate to the read-only runtime status", () => {
+  const fixture = managerFixture();
+  fixture.manager.presentationCapabilities = () => ({
+    contract: "cordisx.channel-manager-presentation-capabilities/v1",
+    schemaVersion: 1,
+    mode: "snapshot-only",
+  });
+  const source = new ChannelCollectionSource(fixture.manager, "en");
+  try {
+    const item = source.snapshot(query(), new AbortController().signal).items[0];
+    assert.equal(item.route.id, "runtime");
+    assert.deepEqual(item.actions, []);
+  } finally {
+    source.dispose();
+  }
+});
+
 test("identifies pending tenant connections and keeps their configuration route available", () => {
   const fixture = managerFixture([{
     ...accounts[0],

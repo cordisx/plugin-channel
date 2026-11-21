@@ -2,6 +2,176 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { apply } from "../dist/channel.js";
 
+test("snapshot-only presentation registers only read-only account status surfaces", () => {
+  const priorDocument = globalThis.document;
+  globalThis.document = { documentElement: { lang: "en" } };
+  const pages = new Map(), routes = new Map(), commands = new Map(), projections = [], effects = [];
+  const listeners = new Set();
+  const account = {
+    connectionToken: "opaque",
+    adapterKind: "simulator",
+    connectionState: "ready",
+    configurationState: "ready",
+    inbound: { pending: 0, retrying: 0, deadLetter: 0 },
+    outbound: { pending: 0, retrying: 0, deadLetter: 0 },
+    availableOperations: ["connection.disable"],
+  };
+  const manager = {
+    forOwnPresentationService() {
+      return this;
+    },
+    presentationCapabilities() {
+      return {
+        contract: "cordisx.channel-manager-presentation-capabilities/v1",
+        schemaVersion: 1,
+        mode: "snapshot-only",
+      };
+    },
+    // Method presence and even stale advertised operations must not reopen settings.
+    mountSettingsForm() {},
+    mountBindingModelForm() {},
+    mountConversationReplyPolicyForm() {},
+    snapshot: () => ({
+      accounts: [account],
+      bindings: [],
+      availableOperations: ["target.connection.create.simulator"],
+    }),
+    subscribe(listener) {
+      listeners.add(listener);
+      return { dispose: () => listeners.delete(listener) };
+    },
+  };
+  const ctx = {
+    i18n: { define() {} },
+    notifications: {},
+    channelManager: manager,
+    pages: {
+      register: metadata => {
+        pages.set(metadata.id, metadata);
+        return () => pages.delete(metadata.id);
+      },
+    },
+    routes: {
+      register: metadata => {
+        routes.set(metadata.id, metadata);
+      },
+    },
+    commands: {
+      register: metadata => {
+        commands.set(metadata.id, metadata);
+      },
+    },
+    managerContent: {
+      supportedSchemaVersions: [1, 6],
+      replaceProjection: projection => {
+        projections.push(projection);
+        return () => {};
+      },
+    },
+    effect: setup => effects.push(setup()),
+    slots: { register() {} },
+  };
+  try {
+    apply(ctx);
+    assert.deepEqual([...routes.keys()].sort(), ["runtime", "settings"]);
+    assert.deepEqual([...pages.keys()].sort(), ["runtime", "settings"]);
+    assert.deepEqual(pages.get("settings").headerActions, []);
+    assert.deepEqual([...commands.keys()], []);
+    const projection = projections.at(-1);
+    assert.deepEqual(projection.declarations.map(item => item.route.id).sort(), ["runtime", "settings"]);
+    assert.deepEqual(projection.declarations.find(item => item.route.id === "runtime").tabs.map(tab => tab.id), [
+      "runtime",
+    ]);
+  } finally {
+    for (const dispose of effects.reverse()) dispose();
+    globalThis.document = priorDocument;
+  }
+  assert.equal(listeners.size, 0);
+});
+
+test("unknown or failing presentation capabilities fail closed while missing v15 preserves older Hosts", async () => {
+  const { snapshotOnlyPresentation } = await import("../dist/presentation-capabilities.js");
+  assert.equal(snapshotOnlyPresentation({}), false);
+  assert.equal(snapshotOnlyPresentation({}, true), true);
+  assert.equal(
+    snapshotOnlyPresentation({
+      presentationCapabilities: () => ({
+        contract: "cordisx.channel-manager-presentation-capabilities/v1",
+        schemaVersion: 1,
+        mode: "standard",
+      }),
+    }),
+    false,
+  );
+  assert.equal(
+    snapshotOnlyPresentation({
+      presentationCapabilities: () => ({
+        contract: "cordisx.channel-manager-presentation-capabilities/v1",
+        schemaVersion: 1,
+        mode: "future",
+      }),
+    }),
+    true,
+  );
+  assert.equal(
+    snapshotOnlyPresentation({
+      presentationCapabilities() {
+        throw new Error("retired");
+      },
+    }),
+    true,
+  );
+});
+
+test("an explicit standard v15 facade retains the existing settings and creation entrypoints", () => {
+  const pages = new Map(), routes = new Map(), commands = new Map(), effects = [];
+  const manager = {
+    forOwnPresentationService() {
+      return this;
+    },
+    presentationCapabilities: () => ({
+      contract: "cordisx.channel-manager-presentation-capabilities/v1",
+      schemaVersion: 1,
+      mode: "standard",
+    }),
+    mountSettingsForm() {},
+    snapshot: () => ({ accounts: [], availableOperations: ["target.connection.create.simulator"] }),
+    subscribe: () => ({ dispose() {} }),
+  };
+  const ctx = {
+    i18n: { define() {} },
+    notifications: {},
+    channelManager: manager,
+    pages: {
+      register: metadata => {
+        pages.set(metadata.id, metadata);
+        return () => pages.delete(metadata.id);
+      },
+    },
+    routes: {
+      register: metadata => {
+        routes.set(metadata.id, metadata);
+      },
+    },
+    commands: {
+      register: metadata => {
+        commands.set(metadata.id, metadata);
+      },
+    },
+    managerContent: { replaceProjection: () => () => {} },
+    effect: setup => effects.push(setup()),
+    slots: { register() {} },
+  };
+  try {
+    apply(ctx);
+    assert.ok(routes.has("create") && routes.has("policy") && routes.has("preferences-defaults"));
+    assert.ok(commands.has("open-create") && commands.has("configure-policy"));
+    assert.deepEqual(pages.get("settings").headerActions.map(item => item.id), ["policy", "create"]);
+  } finally {
+    for (const dispose of effects.reverse()) dispose();
+  }
+});
+
 test("uses the owned reply-policy successor when available and keeps policy controls on older Hosts", async () => {
   let configured = 0, oldConfigured = 0;
   const commands = new Map();
