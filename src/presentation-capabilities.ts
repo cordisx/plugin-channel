@@ -18,6 +18,20 @@ export function configurationOnlyPresentation(manager: unknown): manager is Chan
   }
 }
 
+/** The restricted facade must explicitly advertise connection control. */
+export function configurationConnectionControl(manager: unknown): boolean {
+  if (!configurationOnlyPresentation(manager)) return false;
+  try {
+    const capabilities: unknown = Reflect.get(manager, "configurationPresentationCapabilities");
+    const value: unknown = (capabilities as () => unknown).call(manager);
+    return value !== null && typeof value === "object" && !Array.isArray(value)
+      && Reflect.get(value, "connectionControl") === "enable-disable"
+      && typeof Reflect.get(manager, "execute") === "function";
+  } catch {
+    return false;
+  }
+}
+
 /** Older Hosts keep their existing behavior; an invalid advertised descriptor fails closed. */
 export function snapshotOnlyPresentation(manager: ChannelManagerV2, mustNegotiate = false): boolean {
   try {

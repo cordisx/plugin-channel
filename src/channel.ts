@@ -2,7 +2,11 @@ import type { ChannelManagerV7 } from "@cordisx/protocol/channel-manager/v7";
 import type { ChannelManagerV10 } from "@cordisx/protocol/channel-manager/v10";
 import type { ChannelManagerV12 } from "@cordisx/protocol/channel-manager/v12";
 import type { ChannelManagerV11 } from "@cordisx/protocol/channel-manager/v11";
-import { configurationOnlyPresentation, snapshotOnlyPresentation } from "./presentation-capabilities.js";
+import {
+  configurationConnectionControl,
+  configurationOnlyPresentation,
+  snapshotOnlyPresentation,
+} from "./presentation-capabilities.js";
 import { channelSettingsTabs } from "./settings.js";
 import { ChannelConversationCatalog } from "./conversation-catalog.js";
 import { conversationRecordSummary } from "./record-summary.js";
@@ -177,6 +181,7 @@ function page(
   canConfigurePolicy = false,
   settingsAvailable = false,
   snapshotOnly = false,
+  connectionControl = false,
 ): CordisXPageMetadataV4 {
   return {
     $schema: CORDISX_PAGE_SCHEMA_V4,
@@ -206,21 +211,26 @@ function page(
         }],
       }
       : {}),
-    ...(id === "configuration" && !snapshotOnly
+    ...(id === "configuration" && (!snapshotOnly || connectionControl)
       ? {
-        headerActions: [{
-          id: "connection-toggle",
-          label: message("connection.disable"),
-          ariaLabel: message("connection.disable"),
-          icon: "host:log-in" as const,
-          command: { id: "toggle-connection" },
-        }, {
-          id: "connection-reconnect",
-          label: message("connection.reconnect"),
-          ariaLabel: message("connection.reconnect"),
-          icon: "host:refresh" as const,
-          command: { id: "reconnect-connection" },
-        }],
+        headerActions: [
+          {
+            id: "connection-toggle",
+            label: message("connection.disable"),
+            ariaLabel: message("connection.disable"),
+            icon: "host:log-in" as const,
+            command: { id: "toggle-connection" },
+          },
+          ...(!snapshotOnly
+            ? [{
+              id: "connection-reconnect",
+              label: message("connection.reconnect"),
+              ariaLabel: message("connection.reconnect"),
+              icon: "host:refresh" as const,
+              command: { id: "reconnect-connection" },
+            }]
+            : []),
+        ],
       }
       : {}),
   };
@@ -397,6 +407,7 @@ export function apply(ctx: Context): void {
   const manager = selected.manager;
   const snapshotOnly = selected.mode === "snapshot-only";
   const configurationOnly = selected.mode === "configuration-only";
+  const connectionControl = configurationOnly && configurationConnectionControl(manager);
   const restricted = selected.mode !== "standard";
   const settingsAvailable = !restricted
     && typeof (manager as Partial<ChannelManagerV11>).mountSettingsForm === "function";
@@ -428,8 +439,10 @@ export function apply(ctx: Context): void {
       tuple[0].startsWith("preferences-") && !settingsAvailable || tuple[0] === "preferences-models" && !modelsAvailable
     ) continue;
     ctx.pages.register<Messages>(
-      page(tuple, false, false, false, restricted),
-      tuple[0] === "configuration" && !restricted ? withConfigurationHeader(ctx, manager, mount) : mount,
+      page(tuple, false, false, false, restricted, connectionControl),
+      tuple[0] === "configuration" && (!restricted || connectionControl)
+        ? withConfigurationHeader(ctx, manager, mount, !restricted)
+        : mount,
     );
   }
   for (const definition of routes.map(route)) {

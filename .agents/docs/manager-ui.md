@@ -75,6 +75,10 @@ shows configuration. In this mode only the list, configuration and runtime
 routes are registered; creation, connection controls, policy, logs and sessions
 remain hidden. A pending identity without a usable form opens runtime status.
 Invalid descriptors fail closed, and an older v15 facade remains read-only.
+If the facade explicitly advertises `connectionControl: "enable-disable"`,
+Channel reuses the standard connection header toggle for resolved accounts.
+Reconnect remains unavailable in this mode; missing or unknown capabilities
+leave the configuration form without connection controls.
 
 The v15 specification and Host implementation are separate pending changes;
 this compatibility path does not imply that either is merged, published, or

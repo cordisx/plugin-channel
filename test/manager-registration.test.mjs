@@ -167,7 +167,9 @@ test("configuration-only presentation exposes the existing form and status witho
 });
 
 test("configuration capability validation fails closed on incomplete or malformed facades", async () => {
-  const { configurationOnlyPresentation } = await import("../dist/presentation-capabilities.js");
+  const { configurationConnectionControl, configurationOnlyPresentation } = await import(
+    "../dist/presentation-capabilities.js"
+  );
   const valid = {
     configurationPresentationCapabilities: () => ({
       contract: "cordisx.channel-manager-configuration-presentation-capabilities/v1",
@@ -179,6 +181,29 @@ test("configuration capability validation fails closed on incomplete or malforme
     mountConnectionConfigurationForm() {},
   };
   assert.equal(configurationOnlyPresentation(valid), true);
+  assert.equal(configurationConnectionControl(valid), false);
+  const controlled = {
+    ...valid,
+    configurationPresentationCapabilities: () => ({
+      contract: "cordisx.channel-manager-configuration-presentation-capabilities/v1",
+      schemaVersion: 1,
+      mode: "configuration-only",
+      connectionControl: "enable-disable",
+    }),
+    execute() {},
+  };
+  assert.equal(configurationConnectionControl(controlled), true);
+  assert.equal(configurationConnectionControl({ ...controlled, execute: undefined }), false);
+  assert.equal(
+    configurationConnectionControl({
+      ...controlled,
+      configurationPresentationCapabilities: () => ({
+        ...controlled.configurationPresentationCapabilities(),
+        connectionControl: "reconnect",
+      }),
+    }),
+    false,
+  );
   assert.equal(configurationOnlyPresentation({ ...valid, mountConnectionConfigurationForm: undefined }), false);
   assert.equal(
     configurationOnlyPresentation({ ...valid, configurationPresentationCapabilities: () => ({ mode: "standard" }) }),
@@ -193,6 +218,105 @@ test("configuration capability validation fails closed on incomplete or malforme
     }),
     false,
   );
+});
+
+test("configuration-only control reuses the header toggle without exposing reconnect", () => {
+  const priorDocument = globalThis.document;
+  globalThis.document = { documentElement: { lang: "en" } };
+  const pages = new Map(), routes = new Map(), effects = [];
+  const facade = {
+    configurationPresentationCapabilities: () => ({
+      contract: "cordisx.channel-manager-configuration-presentation-capabilities/v1",
+      schemaVersion: 1,
+      mode: "configuration-only",
+      connectionControl: "enable-disable",
+    }),
+    mountConnectionConfigurationForm() {},
+    execute() {},
+    snapshot: () => ({ accounts: [], bindings: [], availableOperations: [] }),
+    subscribe: () => ({ dispose() {} }),
+  };
+  const ctx = {
+    i18n: { define() {} },
+    notifications: {},
+    channelManager: { forOwnConfigurationPresentationService: () => facade },
+    pages: {
+      register: metadata => {
+        pages.set(metadata.id, metadata);
+        return () => pages.delete(metadata.id);
+      },
+    },
+    routes: { register: metadata => routes.set(metadata.id, metadata) },
+    commands: { register() {} },
+    managerContent: { replaceProjection: () => () => {} },
+    effect: setup => effects.push(setup()),
+    slots: { register() {} },
+  };
+  try {
+    apply(ctx);
+    assert.deepEqual([...routes.keys()].sort(), ["configuration", "runtime", "settings"]);
+    assert.deepEqual(pages.get("configuration").headerActions.map(action => action.id), ["connection-toggle"]);
+    assert.deepEqual(pages.get("settings").headerActions, []);
+  } finally {
+    for (const dispose of effects.reverse()) dispose();
+    globalThis.document = priorDocument;
+  }
+});
+
+test("the restricted header dispatches the current toggle and disposes its commands", async () => {
+  const { withConfigurationHeader } = await import("../dist/configuration-header.js");
+  const commands = new Map(), notifications = [], listeners = new Set(), labels = [];
+  let enabled = true;
+  const calls = [];
+  const manager = {
+    snapshot: () => ({
+      profileId: "test",
+      hostGeneration: "owner",
+      revision: enabled ? 1 : 2,
+      accounts: [{
+        connectionToken: "opaque",
+        connectionState: enabled ? "ready" : "unavailable",
+        availableOperations: enabled ? ["connection.disable", "connection.reconnect"] : ["connection.enable"],
+      }],
+    }),
+    subscribe: listener => {
+      listeners.add(listener);
+      return { dispose: () => listeners.delete(listener) };
+    },
+    execute: async request => {
+      calls.push(request);
+      enabled = false;
+      for (const listener of listeners) listener();
+      return { status: "applied" };
+    },
+  };
+  const ctx = {
+    commands: {
+      register: (metadata, run) => {
+        commands.set(metadata.id, run);
+        return () => commands.delete(metadata.id);
+      },
+    },
+    notifications: { show: notification => notifications.push(notification) },
+  };
+  const controller = new AbortController();
+  const page = {
+    params: { connectionToken: "opaque" },
+    signal: controller.signal,
+    controls: { setHeaderActionLabel: (...args) => labels.push(args) },
+    localization: { getSnapshot: () => ({ locale: "en" }) },
+  };
+  const dispose = withConfigurationHeader(ctx, manager, () => () => {}, false)(page);
+  assert.deepEqual([...commands.keys()], ["toggle-connection"]);
+  await commands.get("toggle-connection")();
+  assert.equal(calls[0].operation, "connection.disable");
+  assert.equal(calls[0].expectedRevision, 1);
+  assert.equal(notifications[0].type, "success");
+  assert.equal(labels.at(-1)[1].key, "connection.enable");
+  controller.abort();
+  dispose();
+  assert.equal(commands.size, 0);
+  assert.equal(listeners.size, 0);
 });
 
 test("an invalid configuration facade cannot fall back to standard controls", () => {
