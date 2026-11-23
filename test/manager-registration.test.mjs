@@ -167,9 +167,10 @@ test("configuration-only presentation exposes the existing form and status witho
 });
 
 test("configuration capability validation fails closed on incomplete or malformed facades", async () => {
-  const { configurationConnectionControl, configurationOnlyPresentation } = await import(
-    "../dist/presentation-capabilities.js"
-  );
+  const { configurationConnectionControl, configurationConnectionReconnect, configurationOnlyPresentation } =
+    await import(
+      "../dist/presentation-capabilities.js"
+    );
   const valid = {
     configurationPresentationCapabilities: () => ({
       contract: "cordisx.channel-manager-configuration-presentation-capabilities/v1",
@@ -193,6 +194,28 @@ test("configuration capability validation fails closed on incomplete or malforme
     execute() {},
   };
   assert.equal(configurationConnectionControl(controlled), true);
+  assert.equal(configurationConnectionReconnect(controlled), false);
+  assert.equal(
+    configurationConnectionReconnect({
+      ...controlled,
+      configurationPresentationCapabilities: () => ({
+        ...controlled.configurationPresentationCapabilities(),
+        connectionReconnect: true,
+      }),
+    }),
+    true,
+  );
+  assert.equal(
+    configurationConnectionReconnect({
+      ...controlled,
+      configurationPresentationCapabilities: () => ({
+        ...controlled.configurationPresentationCapabilities(),
+        connectionControl: undefined,
+        connectionReconnect: true,
+      }),
+    }),
+    false,
+  );
   assert.equal(configurationConnectionControl({ ...controlled, execute: undefined }), false);
   assert.equal(
     configurationConnectionControl({
@@ -257,6 +280,21 @@ test("configuration-only control reuses the header toggle without exposing recon
     assert.deepEqual([...routes.keys()].sort(), ["configuration", "runtime", "settings"]);
     assert.deepEqual(pages.get("configuration").headerActions.map(action => action.id), ["connection-toggle"]);
     assert.deepEqual(pages.get("settings").headerActions, []);
+    for (const dispose of effects.splice(0).reverse()) dispose();
+    pages.clear();
+    routes.clear();
+    facade.configurationPresentationCapabilities = () => ({
+      contract: "cordisx.channel-manager-configuration-presentation-capabilities/v1",
+      schemaVersion: 1,
+      mode: "configuration-only",
+      connectionControl: "enable-disable",
+      connectionReconnect: true,
+    });
+    apply(ctx);
+    assert.deepEqual(pages.get("configuration").headerActions.map(action => action.id), [
+      "connection-toggle",
+      "connection-reconnect",
+    ]);
   } finally {
     for (const dispose of effects.reverse()) dispose();
     globalThis.document = priorDocument;

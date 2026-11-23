@@ -72,15 +72,17 @@ retain their existing behavior, including their own feature checks.
 The proposed v16 configuration facade is requested separately and must return
 its exact `configuration-only` descriptor and the v8 Host form before Channel
 shows configuration. In this mode only the list, configuration and runtime
-routes are registered; creation, connection controls, policy, logs and sessions
-remain hidden. A pending identity without a usable form opens runtime status.
+routes are registered; creation, policy, logs and sessions remain hidden.
+Connection controls require explicit capabilities. A pending identity without
+a usable form opens runtime status.
 Invalid descriptors fail closed, and an older v15 facade remains read-only.
 If the facade explicitly advertises `connectionControl: "enable-disable"`,
 Channel reuses the standard connection header toggle for resolved accounts.
-Reconnect remains unavailable in this mode; missing or unknown capabilities
-leave the configuration form without connection controls.
+An additional explicit `connectionReconnect: true` capability exposes the
+existing reconnect action for enabled connections. Missing or unknown
+capabilities leave the corresponding controls unavailable.
 
-The v15 specification and Host implementation are separate pending changes;
+The v15 and v16 specifications and Host implementation are separate pending changes;
 this compatibility path does not imply that either is merged, published, or
 available in an installed Host. The plugin continues building against its
 current locked Protocol version while feature-detecting the proposed entrypoint.

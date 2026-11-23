@@ -4,6 +4,7 @@ import type { ChannelManagerV12 } from "@cordisx/protocol/channel-manager/v12";
 import type { ChannelManagerV11 } from "@cordisx/protocol/channel-manager/v11";
 import {
   configurationConnectionControl,
+  configurationConnectionReconnect,
   configurationOnlyPresentation,
   snapshotOnlyPresentation,
 } from "./presentation-capabilities.js";
@@ -182,6 +183,7 @@ function page(
   settingsAvailable = false,
   snapshotOnly = false,
   connectionControl = false,
+  connectionReconnect = false,
 ): CordisXPageMetadataV4 {
   return {
     $schema: CORDISX_PAGE_SCHEMA_V4,
@@ -221,7 +223,7 @@ function page(
             icon: "host:log-in" as const,
             command: { id: "toggle-connection" },
           },
-          ...(!snapshotOnly
+          ...(!snapshotOnly || connectionReconnect
             ? [{
               id: "connection-reconnect",
               label: message("connection.reconnect"),
@@ -408,6 +410,7 @@ export function apply(ctx: Context): void {
   const snapshotOnly = selected.mode === "snapshot-only";
   const configurationOnly = selected.mode === "configuration-only";
   const connectionControl = configurationOnly && configurationConnectionControl(manager);
+  const connectionReconnect = connectionControl && configurationConnectionReconnect(manager);
   const restricted = selected.mode !== "standard";
   const settingsAvailable = !restricted
     && typeof (manager as Partial<ChannelManagerV11>).mountSettingsForm === "function";
@@ -439,9 +442,9 @@ export function apply(ctx: Context): void {
       tuple[0].startsWith("preferences-") && !settingsAvailable || tuple[0] === "preferences-models" && !modelsAvailable
     ) continue;
     ctx.pages.register<Messages>(
-      page(tuple, false, false, false, restricted, connectionControl),
+      page(tuple, false, false, false, restricted, connectionControl, connectionReconnect),
       tuple[0] === "configuration" && (!restricted || connectionControl)
-        ? withConfigurationHeader(ctx, manager, mount, !restricted)
+        ? withConfigurationHeader(ctx, manager, mount, !restricted || connectionReconnect)
         : mount,
     );
   }

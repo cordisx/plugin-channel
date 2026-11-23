@@ -32,6 +32,19 @@ export function configurationConnectionControl(manager: unknown): boolean {
   }
 }
 
+/** Reconnect is independent and never follows from enable/disable alone. */
+export function configurationConnectionReconnect(manager: unknown): boolean {
+  if (!configurationConnectionControl(manager)) return false;
+  try {
+    const capabilities: unknown = Reflect.get(manager as object, "configurationPresentationCapabilities");
+    const value: unknown = (capabilities as () => unknown).call(manager);
+    return value !== null && typeof value === "object" && !Array.isArray(value)
+      && Reflect.get(value, "connectionReconnect") === true;
+  } catch {
+    return false;
+  }
+}
+
 /** Older Hosts keep their existing behavior; an invalid advertised descriptor fails closed. */
 export function snapshotOnlyPresentation(manager: ChannelManagerV2, mustNegotiate = false): boolean {
   try {
