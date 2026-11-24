@@ -4,6 +4,7 @@ import type { ChannelManagerV12 } from "@cordisx/protocol/channel-manager/v12";
 import type { ChannelManagerV11 } from "@cordisx/protocol/channel-manager/v11";
 import {
   configurationConnectionControl,
+  configurationConnectionCreate,
   configurationConnectionReconnect,
   configurationOnlyPresentation,
   snapshotOnlyPresentation,
@@ -184,6 +185,7 @@ function page(
   snapshotOnly = false,
   connectionControl = false,
   connectionReconnect = false,
+  credentialCreate = false,
 ): CordisXPageMetadataV4 {
   return {
     $schema: CORDISX_PAGE_SCHEMA_V4,
@@ -196,21 +198,26 @@ function page(
     ...(id === "settings"
       ? {
         breadcrumbs: [],
-        headerActions: snapshotOnly ? [] : [{
-          id: "policy",
-          label: message(settingsAvailable ? "settings.title" : "policy.configure"),
-          ariaLabel: message(settingsAvailable ? "settings.title" : "policy.configure"),
-          icon: "host:settings" as const,
-          command: { id: "configure-policy" },
-          disabled: { value: !settingsAvailable && !canConfigurePolicy },
-        }, {
-          id: "create",
-          label: message("route.create"),
-          ariaLabel: message("route.create"),
-          icon: "host:new" as const,
-          command: { id: "open-create" },
-          disabled: { value: !canCreate, ...(!canCreate ? { reason: message("create.unavailable") } : {}) },
-        }],
+        headerActions: [
+          ...(snapshotOnly ? [] : [{
+            id: "policy",
+            label: message(settingsAvailable ? "settings.title" : "policy.configure"),
+            ariaLabel: message(settingsAvailable ? "settings.title" : "policy.configure"),
+            icon: "host:settings" as const,
+            command: { id: "configure-policy" },
+            disabled: { value: !settingsAvailable && !canConfigurePolicy },
+          }]),
+          ...(!snapshotOnly || credentialCreate
+            ? [{
+              id: "create",
+              label: message("route.create"),
+              ariaLabel: message("route.create"),
+              icon: "host:new" as const,
+              command: { id: "open-create" },
+              disabled: { value: !canCreate, ...(!canCreate ? { reason: message("create.unavailable") } : {}) },
+            }]
+            : []),
+        ],
       }
       : {}),
     ...(id === "configuration" && (!snapshotOnly || connectionControl)
@@ -412,6 +419,10 @@ export function apply(ctx: Context): void {
   const connectionControl = configurationOnly && configurationConnectionControl(manager);
   const connectionReconnect = connectionControl && configurationConnectionReconnect(manager);
   const restricted = selected.mode !== "standard";
+  const credentialCreate = configurationOnly && configurationConnectionCreate(manager);
+  const creationAvailable = !restricted || credentialCreate;
+  const creationPlatforms = (snapshot: Parameters<typeof availablePlatforms>[0]) =>
+    availablePlatforms(snapshot).filter(platform => !configurationOnly || platform !== "simulator");
   const settingsAvailable = !restricted
     && typeof (manager as Partial<ChannelManagerV11>).mountSettingsForm === "function";
   const modelsAvailable = !restricted
@@ -437,7 +448,10 @@ export function apply(ctx: Context): void {
     createChannelPage(manager, ctx.notifications, conversations, summaryAvailable, snapshotOnly, configurationOnly),
   );
   for (const tuple of pages.filter(([id]) => id !== "settings")) {
-    if (restricted && tuple[0] !== "runtime" && !(configurationOnly && tuple[0] === "configuration")) continue;
+    if (
+      restricted && tuple[0] !== "runtime" && !(configurationOnly && tuple[0] === "configuration")
+      && !(credentialCreate && tuple[0] === "create")
+    ) continue;
     if (
       tuple[0].startsWith("preferences-") && !settingsAvailable || tuple[0] === "preferences-models" && !modelsAvailable
     ) continue;
@@ -452,6 +466,7 @@ export function apply(ctx: Context): void {
     if (
       restricted && definition.id !== "settings" && definition.id !== "runtime"
       && !(configurationOnly && definition.id === "configuration")
+      && !(credentialCreate && definition.id === "create")
     ) continue;
     if (
       definition.id.startsWith("preferences-") && !settingsAvailable
@@ -465,9 +480,9 @@ export function apply(ctx: Context): void {
     });
     if (destination) ctx.effect(() => () => destination.dispose(), "channel: unified settings destination");
   }
-  if (!restricted) {
+  if (creationAvailable) {
     ctx.commands.register({ id: "open-create", title: message("route.create") }, async ({ signal }) => {
-      if (signal.aborted || availablePlatforms(manager.snapshot()).length === 0) {
+      if (signal.aborted || creationPlatforms(manager.snapshot()).length === 0) {
         return;
       }
       await ctx.routes.navigate({ id: "create" });
@@ -524,7 +539,7 @@ export function apply(ctx: Context): void {
         summaryAvailable && "snapshotWithIdentity" in manager && typeof manager.snapshotWithIdentity === "function"
           ? (manager as ChannelManagerV7).snapshotWithIdentity()
           : manager.snapshot();
-      const canCreate = !restricted && availablePlatforms(snapshot).length > 0;
+      const canCreate = creationAvailable && creationPlatforms(snapshot).length > 0;
       if (listCanCreate !== canCreate) {
         void disposeListPage();
         disposeListPage = ctx.pages.register<Messages>(
@@ -536,6 +551,9 @@ export function apply(ctx: Context): void {
               || typeof (manager as Partial<ChannelManagerV4>).configureConversationPolicy === "function",
             settingsAvailable,
             restricted,
+            false,
+            false,
+            credentialCreate,
           ),
           mount,
         );
@@ -552,7 +570,7 @@ export function apply(ctx: Context): void {
         route: { id: "settings" },
         header: { title: { kind: "route" } },
       }];
-      if (!restricted) {
+      if (creationAvailable) {
         declarations.push({
           $schema: CORDISX_MANAGER_CONTENT_NAVIGATION_SCHEMA_V1,
           schemaVersion: 1,
@@ -560,7 +578,10 @@ export function apply(ctx: Context): void {
           route: { id: "create" },
           parentRoute: { id: "settings" },
           header: { title: { kind: "route" } },
-        }, {
+        });
+      }
+      if (!restricted) {
+        declarations.push({
           $schema: CORDISX_MANAGER_CONTENT_NAVIGATION_SCHEMA_V1,
           schemaVersion: 1,
           id: "policy",

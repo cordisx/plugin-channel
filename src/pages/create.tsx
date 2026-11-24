@@ -15,7 +15,9 @@ import { ChannelShell } from "../shell.js";
 
 export function ChannelCreate(props: ChannelPageProps) {
   const { manager, snapshot } = useChannelModel(props.manager);
-  const platforms = availablePlatforms(snapshot);
+  const platforms = availablePlatforms(snapshot).filter(platform =>
+    !props.configurationOnly || platform !== "simulator"
+  );
   const simulator = platforms.includes("simulator");
   const credentialed = platforms.includes("feishu");
   const schema = useMemo(() => createSchema(props.locale, platforms), [props.locale, simulator, credentialed]);

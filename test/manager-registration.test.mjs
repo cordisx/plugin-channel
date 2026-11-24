@@ -167,10 +167,14 @@ test("configuration-only presentation exposes the existing form and status witho
 });
 
 test("configuration capability validation fails closed on incomplete or malformed facades", async () => {
-  const { configurationConnectionControl, configurationConnectionReconnect, configurationOnlyPresentation } =
-    await import(
-      "../dist/presentation-capabilities.js"
-    );
+  const {
+    configurationConnectionControl,
+    configurationConnectionCreate,
+    configurationConnectionReconnect,
+    configurationOnlyPresentation,
+  } = await import(
+    "../dist/presentation-capabilities.js"
+  );
   const valid = {
     configurationPresentationCapabilities: () => ({
       contract: "cordisx.channel-manager-configuration-presentation-capabilities/v1",
@@ -183,6 +187,7 @@ test("configuration capability validation fails closed on incomplete or malforme
   };
   assert.equal(configurationOnlyPresentation(valid), true);
   assert.equal(configurationConnectionControl(valid), false);
+  assert.equal(configurationConnectionCreate(valid), false);
   const controlled = {
     ...valid,
     configurationPresentationCapabilities: () => ({
@@ -217,6 +222,26 @@ test("configuration capability validation fails closed on incomplete or malforme
     false,
   );
   assert.equal(configurationConnectionControl({ ...controlled, execute: undefined }), false);
+  const creation = {
+    ...controlled,
+    issue() {},
+    configurationPresentationCapabilities: () => ({
+      ...controlled.configurationPresentationCapabilities(),
+      connectionCreate: "credentialed",
+    }),
+  };
+  assert.equal(configurationConnectionCreate(creation), true);
+  assert.equal(configurationConnectionCreate({ ...creation, issue: undefined }), false);
+  assert.equal(
+    configurationConnectionCreate({
+      ...creation,
+      configurationPresentationCapabilities: () => ({
+        ...creation.configurationPresentationCapabilities(),
+        connectionCreate: "simulator",
+      }),
+    }),
+    false,
+  );
   assert.equal(
     configurationConnectionControl({
       ...controlled,
@@ -241,6 +266,57 @@ test("configuration capability validation fails closed on incomplete or malforme
     }),
     false,
   );
+});
+
+test("configuration-only creation is shown only when the Host advertises it", () => {
+  const priorDocument = globalThis.document;
+  globalThis.document = { documentElement: { lang: "en" } };
+  const pages = new Map(), routes = new Map(), commands = new Map(), projections = [], effects = [];
+  const facade = {
+    configurationPresentationCapabilities: () => ({
+      contract: "cordisx.channel-manager-configuration-presentation-capabilities/v1",
+      schemaVersion: 1,
+      mode: "configuration-only",
+      connectionCreate: "credentialed",
+    }),
+    mountConnectionConfigurationForm() {},
+    issue() {},
+    execute() {},
+    snapshot: () => ({ accounts: [], bindings: [], availableOperations: ["target.credential.capture.create"] }),
+    subscribe: () => ({ dispose() {} }),
+  };
+  const ctx = {
+    i18n: { define() {} },
+    notifications: {},
+    channelManager: { forOwnConfigurationPresentationService: () => facade },
+    pages: {
+      register: metadata => {
+        pages.set(metadata.id, metadata);
+        return () => pages.delete(metadata.id);
+      },
+    },
+    routes: { register: metadata => routes.set(metadata.id, metadata) },
+    commands: { register: metadata => commands.set(metadata.id, metadata) },
+    managerContent: {
+      replaceProjection: projection => {
+        projections.push(projection);
+        return () => {};
+      },
+    },
+    effect: setup => effects.push(setup()),
+    slots: { register() {} },
+  };
+  try {
+    apply(ctx);
+    assert.deepEqual([...routes.keys()].sort(), ["configuration", "create", "runtime", "settings"]);
+    assert.deepEqual([...commands.keys()], ["open-create"]);
+    assert.deepEqual(pages.get("settings").headerActions.map(action => action.id), ["create"]);
+    assert.equal(pages.get("settings").headerActions[0].disabled.value, false);
+    assert.ok(projections.at(-1).declarations.some(item => item.route.id === "create"));
+  } finally {
+    for (const dispose of effects.reverse()) dispose();
+    globalThis.document = priorDocument;
+  }
 });
 
 test("configuration-only control reuses the header toggle without exposing reconnect", () => {
