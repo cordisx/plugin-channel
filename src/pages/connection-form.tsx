@@ -21,7 +21,9 @@ export function ChannelConnectionConfigurationForm(props: ChannelPageProps & { r
       {
         signal: lifetime.signal,
         onResult: outcome => {
-          if (!lifetime.signal.aborted) {
+          // The Host shows this validation beside the tenant field; a second
+          // floating error would obscure the form's retry controls.
+          if (!lifetime.signal.aborted && !(outcome.status === "rejected" && outcome.code === "TENANT_MISMATCH")) {
             notifyResult(props, "connection.update", outcome.status === "applied", outcome.code);
           }
         },
