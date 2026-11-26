@@ -14,7 +14,7 @@ import { copy, type CopyKey } from "./locales.js";
 import { stateLabel } from "./model.js";
 import { platformLabel } from "./presentation.js";
 import { channelPlatformIcon } from "./platform-icons.js";
-import { snapshotOnlyPresentation } from "./presentation-capabilities.js";
+import { configurationPendingTenantResolution, snapshotOnlyPresentation } from "./presentation-capabilities.js";
 
 const COLLECTION_ID = "connections";
 const STATES = ["ready", "starting", "retrying", "disabled", "stopped", "unavailable"] as const;
@@ -145,6 +145,7 @@ export class ChannelCollectionSource implements ManagerCollectionSourceV1 {
     // Return the complete selected view. Approximate plugin-side search can discard Unicode matches.
     const accounts = all.filter(account => query.view === "all" || account.connectionState === query.view);
     if (accounts.length > 1000) throw new Error("Channel collection exceeds its snapshot bound.");
+    const pendingResolution = this.configurationOnly && configurationPendingTenantResolution(this.manager);
     const items = accounts.map((account, order): ManagerCollectionItem => {
       const platform = platformLabel(this.locale, account.adapterKind);
       const name = publicName(account.displayName ?? account.accountName ?? platform);
@@ -162,7 +163,8 @@ export class ChannelCollectionSource implements ManagerCollectionSourceV1 {
         },
         leadingVisual: { kind: "semantic-icon", icon: "host:layers" },
         route: {
-          id: this.snapshotOnly || this.configurationOnly && account.lastErrorCode === "TENANT_IDENTIFICATION_PENDING"
+          id: this.snapshotOnly || this.configurationOnly && !pendingResolution
+              && account.lastErrorCode === "TENANT_IDENTIFICATION_PENDING"
             ? "runtime"
             : "configuration",
           params: { connectionToken: account.connectionToken },

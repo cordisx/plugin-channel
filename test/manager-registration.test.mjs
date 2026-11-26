@@ -93,6 +93,7 @@ test("configuration-only presentation exposes the existing form and status witho
   const priorDocument = globalThis.document;
   globalThis.document = { documentElement: { lang: "en" } };
   const pages = new Map(), routes = new Map(), commands = new Map(), projections = [], effects = [];
+  let resolution = false, refresh = () => {};
   const accounts = [
     {
       connectionToken: "ready",
@@ -113,11 +114,15 @@ test("configuration-only presentation exposes the existing form and status witho
       contract: "cordisx.channel-manager-configuration-presentation-capabilities/v1",
       schemaVersion: 1,
       mode: "configuration-only",
+      ...(resolution ? { pendingTenantResolution: true } : {}),
     }),
     mountConnectionConfigurationForm() {},
     mountSettingsForm() {},
     snapshot: () => ({ accounts, bindings: [], availableOperations: ["target.connection.create.simulator"] }),
-    subscribe: () => ({ dispose() {} }),
+    subscribe: listener => {
+      refresh = listener;
+      return { dispose() {} };
+    },
   };
   const manager = {
     forOwnConfigurationPresentationService: () => facade,
@@ -160,6 +165,12 @@ test("configuration-only presentation exposes the existing form and status witho
       item.route.id === "runtime" && item.route.params.connectionToken === "pending"
     );
     assert.deepEqual(pending.tabs.map(tab => tab.id), ["runtime"]);
+    resolution = true;
+    refresh();
+    const editable = projections.at(-1).declarations.find(item =>
+      item.route.id === "configuration" && item.route.params.connectionToken === "pending"
+    );
+    assert.deepEqual(editable.tabs.map(tab => tab.id), ["configuration", "runtime"]);
   } finally {
     for (const dispose of effects.reverse()) dispose();
     globalThis.document = priorDocument;
@@ -172,6 +183,7 @@ test("configuration capability validation fails closed on incomplete or malforme
     configurationConnectionCreate,
     configurationConnectionReconnect,
     configurationOnlyPresentation,
+    configurationPendingTenantResolution,
   } = await import(
     "../dist/presentation-capabilities.js"
   );
@@ -188,6 +200,24 @@ test("configuration capability validation fails closed on incomplete or malforme
   assert.equal(configurationOnlyPresentation(valid), true);
   assert.equal(configurationConnectionControl(valid), false);
   assert.equal(configurationConnectionCreate(valid), false);
+  assert.equal(configurationPendingTenantResolution(valid), false);
+  assert.equal(
+    configurationPendingTenantResolution({
+      ...valid,
+      configurationPresentationCapabilities: () => ({
+        ...valid.configurationPresentationCapabilities(),
+        pendingTenantResolution: true,
+      }),
+    }),
+    true,
+  );
+  assert.equal(
+    configurationPendingTenantResolution({
+      ...valid,
+      configurationPresentationCapabilities: () => ({ mode: "configuration-only", pendingTenantResolution: true }),
+    }),
+    false,
+  );
   const controlled = {
     ...valid,
     configurationPresentationCapabilities: () => ({

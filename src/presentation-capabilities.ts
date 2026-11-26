@@ -60,6 +60,19 @@ export function configurationConnectionCreate(manager: unknown): boolean {
   }
 }
 
+/** Pending identities are editable only when the owner advertises the Host form path. */
+export function configurationPendingTenantResolution(manager: unknown): boolean {
+  if (!configurationOnlyPresentation(manager)) return false;
+  try {
+    const capabilities: unknown = Reflect.get(manager, "configurationPresentationCapabilities");
+    const value: unknown = (capabilities as () => unknown).call(manager);
+    return value !== null && typeof value === "object" && !Array.isArray(value)
+      && Reflect.get(value, "pendingTenantResolution") === true;
+  } catch {
+    return false;
+  }
+}
+
 /** Older Hosts keep their existing behavior; an invalid advertised descriptor fails closed. */
 export function snapshotOnlyPresentation(manager: ChannelManagerV2, mustNegotiate = false): boolean {
   try {

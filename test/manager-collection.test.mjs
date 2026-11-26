@@ -131,6 +131,28 @@ test("configuration-only presentation routes a pending identity to status", () =
   }
 });
 
+test("configuration-only pending identities reach the form only when resolution is advertised", () => {
+  const fixture = managerFixture([{
+    ...accounts[0],
+    lastErrorCode: "TENANT_IDENTIFICATION_PENDING",
+  }]);
+  fixture.manager.configurationPresentationCapabilities = () => ({
+    contract: "cordisx.channel-manager-configuration-presentation-capabilities/v1",
+    schemaVersion: 1,
+    mode: "configuration-only",
+    pendingTenantResolution: true,
+  });
+  fixture.manager.mountConnectionConfigurationForm = () => {};
+  const source = new ChannelCollectionSource(fixture.manager, "en", false, false, true);
+  try {
+    assert.equal(source.snapshot(query(), new AbortController().signal).items[0].route.id, "configuration");
+    fixture.manager.configurationPresentationCapabilities = () => ({ mode: "configuration-only" });
+    assert.equal(source.snapshot(query(), new AbortController().signal).items[0].route.id, "runtime");
+  } finally {
+    source.dispose();
+  }
+});
+
 test("keeps all bilingual registrations and public snapshots valid against published schemas", async () => {
   const ajv = new Ajv({ strict: false });
   for (

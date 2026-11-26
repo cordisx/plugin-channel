@@ -7,6 +7,7 @@ import {
   configurationConnectionCreate,
   configurationConnectionReconnect,
   configurationOnlyPresentation,
+  configurationPendingTenantResolution,
   snapshotOnlyPresentation,
 } from "./presentation-capabilities.js";
 import { channelSettingsTabs } from "./settings.js";
@@ -615,13 +616,14 @@ export function apply(ctx: Context): void {
           ? platformTitle(account.adapterKind)
           : message("record.title", { name: account.displayName }),
       }));
+      const pendingResolution = configurationOnly && configurationPendingTenantResolution(manager);
       for (const account of snapshot.accounts) {
-        const visibleTabs =
-          snapshotOnly || configurationOnly && account.lastErrorCode === "TENANT_IDENTIFICATION_PENDING"
-            ? ["runtime"] as const
-            : configurationOnly
-            ? ["configuration", "runtime"] as const
-            : ["configuration", "runtime", "logs", "sessions"] as const;
+        const visibleTabs = snapshotOnly || configurationOnly && !pendingResolution
+            && account.lastErrorCode === "TENANT_IDENTIFICATION_PENDING"
+          ? ["runtime"] as const
+          : configurationOnly
+          ? ["configuration", "runtime"] as const
+          : ["configuration", "runtime", "logs", "sessions"] as const;
         const tabs = visibleTabs.map(id => ({
           id,
           route: { id, params: { connectionToken: account.connectionToken } },
