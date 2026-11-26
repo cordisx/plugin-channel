@@ -4,11 +4,19 @@ import type { CordisXMessageDefinition, CordisXMessageSchema, CordisXPageMount }
 import { accountByToken, operationFence, routeToken } from "./model.js";
 import { copy } from "./locales.js";
 
+function toggleOperation(account: ReturnType<typeof accountByToken>): "connection.enable" | "connection.disable" {
+  const canEnable = account?.availableOperations.includes("connection.enable") ?? false;
+  const canDisable = account?.availableOperations.includes("connection.disable") ?? false;
+  if (canEnable !== canDisable) return canEnable ? "connection.enable" : "connection.disable";
+  return account?.connectionState === "disabled" ? "connection.enable" : "connection.disable";
+}
+
 /** Header commands are owned by this exact live page, using Host-supplied route params. */
 export function withConfigurationHeader<Messages extends CordisXMessageDefinition<Messages> = CordisXMessageSchema>(
   ctx: Context,
   manager: ChannelManagerV2,
   mount: CordisXPageMount<Messages>,
+  allowReconnect = true,
 ): CordisXPageMount<Messages> {
   return page => {
     const token = routeToken(page.params.connectionToken);
@@ -18,9 +26,7 @@ export function withConfigurationHeader<Messages extends CordisXMessageDefinitio
       if (closed || busy || page.signal.aborted) return;
       const snapshot = manager.snapshot(), account = accountByToken(snapshot, token);
       if (!account) return;
-      const operation = action === "reconnect" ? "connection.reconnect" : account.connectionState === "disabled"
-        ? "connection.enable"
-        : "connection.disable";
+      const operation = action === "reconnect" ? "connection.reconnect" : toggleOperation(account);
       if (!account.availableOperations.includes(operation)) return;
       busy = true;
       let applied = false;
@@ -47,7 +53,7 @@ export function withConfigurationHeader<Messages extends CordisXMessageDefinitio
     const refresh = () => {
       if (closed || page.signal.aborted) return;
       const account = accountByToken(manager.snapshot(), token);
-      const toggle = account?.connectionState === "disabled" ? "connection.enable" : "connection.disable";
+      const toggle = toggleOperation(account);
       page.controls.setHeaderActionLabel("connection-toggle", { namespace: "channel", key: toggle }, {
         namespace: "channel",
         key: toggle,
@@ -58,7 +64,8 @@ export function withConfigurationHeader<Messages extends CordisXMessageDefinitio
           ["reconnect-connection", "connection.reconnect", "reconnect"],
         ] as const
       ) {
-        const available = account?.availableOperations.includes(operation) ?? false;
+        const available = (action !== "reconnect" || allowReconnect)
+          && (account?.availableOperations.includes(operation) ?? false);
         if (!available) {
           void handlers.get(id)?.();
           handlers.delete(id);

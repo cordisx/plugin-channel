@@ -1,6 +1,8 @@
 const EN = {
   "operation.saved": "Operation completed.",
   "operation.failed": "Operation failed. Check the connection and try again.",
+  "operation.configuration-unavailable":
+    "Configuration is temporarily unavailable. Your draft was kept; check other Manager windows or clients, then try again.",
   accounts: "Channel connections",
   "accounts.description": "Manage external messaging connections.",
   "accounts.empty": "No channel connections yet.",
@@ -21,6 +23,8 @@ const EN = {
   "create.unavailable": "Channel creation is unavailable.",
   "platform.simulator": "Simulator",
   "configuration.save": "Save",
+  "configuration.form-unavailable": "Connection settings are temporarily unavailable.",
+  "configuration.retry": "Try again",
   "policy.configure": "Messages and commands",
   "settings.title": "Settings",
   "settings.new-chats": "New chats",
@@ -140,6 +144,7 @@ export type CopyKey = keyof typeof EN;
 const ZH: Record<CopyKey, string> = {
   "operation.saved": "操作已完成",
   "operation.failed": "操作未完成，请检查连接后重试",
+  "operation.configuration-unavailable": "配置暂时不可写，草稿已保留；请检查其他管理窗口或客户端后重试。",
   accounts: "渠道连接",
   "accounts.description": "管理外部消息服务的连接。",
   "accounts.empty": "暂无渠道连接",
@@ -160,6 +165,8 @@ const ZH: Record<CopyKey, string> = {
   "create.unavailable": "当前无法创建渠道",
   "platform.simulator": "模拟器",
   "configuration.save": "保存",
+  "configuration.form-unavailable": "连接配置暂时不可用。",
+  "configuration.retry": "重试",
   "policy.configure": "消息与指令",
   "settings.title": "设置",
   "settings.new-chats": "新建对话",

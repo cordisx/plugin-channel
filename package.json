@@ -45,7 +45,7 @@
   },
   "devDependencies": {
     "@cordisx/eslint-config": "github:cordisx/cordisxmono#c63c2e8c2ba7e11502934a52ad2ce3734e804cdc",
-    "@cordisx/protocol": "github:cordisx/cordisx-protocol#53e16025c26ae20ff3e7ba5f9d4b2c7af469807b",
+    "@cordisx/protocol": "github:cordisx/cordisx-protocol#797eac4282c077d7d5d7c1d8d4b1478670d6b0ea",
     "@deepseek-ai/cordis": "4.0.1",
     "@deepseek-ai/schemastery": "3.18.2",
     "@projectwallace/stylelint-plugin": "0.7.0",
@@ -60,7 +60,8 @@
     "react-dom": "19.2.8",
     "stylelint": "17.15.0",
     "stylelint-config-standard": "40.0.0",
-    "typescript": "5.9.2"
+    "typescript": "5.9.2",
+    "vite": "8.2.2"
   },
   "repository": {
     "type": "git",

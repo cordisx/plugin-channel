@@ -3,7 +3,7 @@
   "schemaVersion": 16,
   "id": "channel",
   "version": "0.1.7",
-  "entry": "./dist/channel.js",
+  "entry": "./dist/browser/module.js",
   "readme": "./README.md",
   "canonicalSource": "https://github.com/cordisx/plugin-channel",
   "distribution": {

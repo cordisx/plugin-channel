@@ -7,4 +7,6 @@ export interface ChannelPageProps extends CordisXReactPageProps {
   readonly manager: ChannelManagerV2;
   readonly locale: string;
   readonly summaryAvailable?: boolean;
+  readonly snapshotOnly?: boolean;
+  readonly configurationOnly?: boolean;
 }

@@ -81,6 +81,23 @@ test("returns complete selected views and echoes the exact Host Unicode search f
   }
 });
 
+test("snapshot-only account rows navigate to the read-only runtime status", () => {
+  const fixture = managerFixture();
+  fixture.manager.presentationCapabilities = () => ({
+    contract: "cordisx.channel-manager-presentation-capabilities/v1",
+    schemaVersion: 1,
+    mode: "snapshot-only",
+  });
+  const source = new ChannelCollectionSource(fixture.manager, "en");
+  try {
+    const item = source.snapshot(query(), new AbortController().signal).items[0];
+    assert.equal(item.route.id, "runtime");
+    assert.deepEqual(item.actions, []);
+  } finally {
+    source.dispose();
+  }
+});
+
 test("identifies pending tenant connections and keeps their configuration route available", () => {
   const fixture = managerFixture([{
     ...accounts[0],
@@ -94,6 +111,43 @@ test("identifies pending tenant connections and keeps their configuration route 
     assert.equal(item.summary.fallback, "飞书 · 待识别租户 ID");
     assert.equal(item.disabled.value, false);
     assert.equal(item.route.id, "configuration");
+  } finally {
+    source.dispose();
+  }
+});
+
+test("configuration-only presentation routes a pending identity to status", () => {
+  const fixture = managerFixture([{
+    ...accounts[0],
+    connectionState: "unavailable",
+    configurationState: "incomplete",
+    lastErrorCode: "TENANT_IDENTIFICATION_PENDING",
+  }]);
+  const source = new ChannelCollectionSource(fixture.manager, "en", false, false, true);
+  try {
+    assert.equal(source.snapshot(query(), new AbortController().signal).items[0].route.id, "runtime");
+  } finally {
+    source.dispose();
+  }
+});
+
+test("configuration-only pending identities reach the form only when resolution is advertised", () => {
+  const fixture = managerFixture([{
+    ...accounts[0],
+    lastErrorCode: "TENANT_IDENTIFICATION_PENDING",
+  }]);
+  fixture.manager.configurationPresentationCapabilities = () => ({
+    contract: "cordisx.channel-manager-configuration-presentation-capabilities/v1",
+    schemaVersion: 1,
+    mode: "configuration-only",
+    pendingTenantResolution: true,
+  });
+  fixture.manager.mountConnectionConfigurationForm = () => {};
+  const source = new ChannelCollectionSource(fixture.manager, "en", false, false, true);
+  try {
+    assert.equal(source.snapshot(query(), new AbortController().signal).items[0].route.id, "configuration");
+    fixture.manager.configurationPresentationCapabilities = () => ({ mode: "configuration-only" });
+    assert.equal(source.snapshot(query(), new AbortController().signal).items[0].route.id, "runtime");
   } finally {
     source.dispose();
   }

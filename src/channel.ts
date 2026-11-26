@@ -2,6 +2,14 @@ import type { ChannelManagerV7 } from "@cordisx/protocol/channel-manager/v7";
 import type { ChannelManagerV10 } from "@cordisx/protocol/channel-manager/v10";
 import type { ChannelManagerV12 } from "@cordisx/protocol/channel-manager/v12";
 import type { ChannelManagerV11 } from "@cordisx/protocol/channel-manager/v11";
+import {
+  configurationConnectionControl,
+  configurationConnectionCreate,
+  configurationConnectionReconnect,
+  configurationOnlyPresentation,
+  configurationPendingTenantResolution,
+  snapshotOnlyPresentation,
+} from "./presentation-capabilities.js";
 import { channelSettingsTabs } from "./settings.js";
 import { ChannelConversationCatalog } from "./conversation-catalog.js";
 import { conversationRecordSummary } from "./record-summary.js";
@@ -175,6 +183,10 @@ function page(
   canCreate = false,
   canConfigurePolicy = false,
   settingsAvailable = false,
+  snapshotOnly = false,
+  connectionControl = false,
+  connectionReconnect = false,
+  credentialCreate = false,
 ): CordisXPageMetadataV4 {
   return {
     $schema: CORDISX_PAGE_SCHEMA_V4,
@@ -187,38 +199,48 @@ function page(
     ...(id === "settings"
       ? {
         breadcrumbs: [],
-        headerActions: [{
-          id: "policy",
-          label: message(settingsAvailable ? "settings.title" : "policy.configure"),
-          ariaLabel: message(settingsAvailable ? "settings.title" : "policy.configure"),
-          icon: "host:settings" as const,
-          command: { id: "configure-policy" },
-          disabled: { value: !settingsAvailable && !canConfigurePolicy },
-        }, {
-          id: "create",
-          label: message("route.create"),
-          ariaLabel: message("route.create"),
-          icon: "host:new" as const,
-          command: { id: "open-create" },
-          disabled: { value: !canCreate, ...(!canCreate ? { reason: message("create.unavailable") } : {}) },
-        }],
+        headerActions: [
+          ...(snapshotOnly ? [] : [{
+            id: "policy",
+            label: message(settingsAvailable ? "settings.title" : "policy.configure"),
+            ariaLabel: message(settingsAvailable ? "settings.title" : "policy.configure"),
+            icon: "host:settings" as const,
+            command: { id: "configure-policy" },
+            disabled: { value: !settingsAvailable && !canConfigurePolicy },
+          }]),
+          ...(!snapshotOnly || credentialCreate
+            ? [{
+              id: "create",
+              label: message("route.create"),
+              ariaLabel: message("route.create"),
+              icon: "host:new" as const,
+              command: { id: "open-create" },
+              disabled: { value: !canCreate, ...(!canCreate ? { reason: message("create.unavailable") } : {}) },
+            }]
+            : []),
+        ],
       }
       : {}),
-    ...(id === "configuration"
+    ...(id === "configuration" && (!snapshotOnly || connectionControl)
       ? {
-        headerActions: [{
-          id: "connection-toggle",
-          label: message("connection.disable"),
-          ariaLabel: message("connection.disable"),
-          icon: "host:log-in" as const,
-          command: { id: "toggle-connection" },
-        }, {
-          id: "connection-reconnect",
-          label: message("connection.reconnect"),
-          ariaLabel: message("connection.reconnect"),
-          icon: "host:refresh" as const,
-          command: { id: "reconnect-connection" },
-        }],
+        headerActions: [
+          {
+            id: "connection-toggle",
+            label: message("connection.disable"),
+            ariaLabel: message("connection.disable"),
+            icon: "host:log-in" as const,
+            command: { id: "toggle-connection" },
+          },
+          ...(!snapshotOnly || connectionReconnect
+            ? [{
+              id: "connection-reconnect",
+              label: message("connection.reconnect"),
+              ariaLabel: message("connection.reconnect"),
+              icon: "host:refresh" as const,
+              command: { id: "reconnect-connection" },
+            }]
+            : []),
+        ],
       }
       : {}),
   };
@@ -250,60 +272,99 @@ function platformTitle(kind: string): CordisXLocalizedText {
   return message("record.title", { name: kind });
 }
 
-function managerFor(ctx: Context): ChannelManagerV2 {
+function managerFor(ctx: Context): {
+  readonly manager: ChannelManagerV2;
+  readonly mode: "standard" | "snapshot-only" | "configuration-only";
+} {
   const manager = ctx.channelManager as Partial<ChannelManagerV11>;
-  const own = typeof manager.forOwnSettingsService === "function"
-    ? manager.forOwnSettingsService()
-    : typeof manager.forOwnConversationService === "function"
-    ? manager.forOwnConversationService()
-    : typeof manager.forOwnWorkflowService === "function"
-    ? manager.forOwnWorkflowService()
-    : typeof manager.forOwnConfigurationService === "function"
-    ? manager.forOwnConfigurationService()
-    : typeof manager.forOwnPageService === "function"
-    ? manager.forOwnPageService()
-    : typeof manager.forOwnReplyService === "function"
-    ? manager.forOwnReplyService()
-    : typeof manager.forOwnService === "function"
-    ? manager.forOwnService()
-    : undefined;
-  if (own) return own;
+  const advertised = "forOwnPresentationService" in manager;
+  let own: ChannelManagerV2 | undefined;
+  let invalidConfigurationFacade = false;
+  try {
+    const getConfiguration: unknown = Reflect.get(manager, "forOwnConfigurationPresentationService");
+    if (typeof getConfiguration === "function") {
+      const configuration: unknown = getConfiguration.call(manager);
+      if (configuration !== undefined) {
+        if (configurationOnlyPresentation(configuration)) {
+          return { manager: configuration, mode: "configuration-only" };
+        }
+        invalidConfigurationFacade = true;
+      }
+    } else if (getConfiguration !== undefined) {
+      invalidConfigurationFacade = true;
+    }
+  } catch {
+    invalidConfigurationFacade = true;
+  }
+  try {
+    const getPresentation: unknown = Reflect.get(manager, "forOwnPresentationService");
+    own = advertised && typeof getPresentation === "function"
+      ? getPresentation.call(manager) as ChannelManagerV2 | undefined
+      : advertised
+      ? undefined
+      : typeof manager.forOwnSettingsService === "function"
+      ? manager.forOwnSettingsService()
+      : typeof manager.forOwnConversationService === "function"
+      ? manager.forOwnConversationService()
+      : typeof manager.forOwnWorkflowService === "function"
+      ? manager.forOwnWorkflowService()
+      : typeof manager.forOwnConfigurationService === "function"
+      ? manager.forOwnConfigurationService()
+      : typeof manager.forOwnPageService === "function"
+      ? manager.forOwnPageService()
+      : typeof manager.forOwnReplyService === "function"
+      ? manager.forOwnReplyService()
+      : typeof manager.forOwnService === "function"
+      ? manager.forOwnService()
+      : undefined;
+  } catch {
+    own = undefined;
+  }
+  if (own && typeof own.snapshot === "function" && typeof own.subscribe === "function") {
+    return {
+      manager: own,
+      mode: invalidConfigurationFacade || snapshotOnlyPresentation(own, advertised) ? "snapshot-only" : "standard",
+    };
+  }
   // Older Hosts or an inactive service must not manufacture a delegated grant.
   return {
-    snapshot: () => ({
-      contract: "cordisx.channel-runtime-snapshot/v3",
-      schemaVersion: 3,
-      profileId: "unavailable",
-      hostGeneration: "unavailable",
-      revision: 0,
-      observedAt: new Date(0).toISOString(),
-      accounts: [],
-      bindings: [],
-      pendingAuthorizations: [],
-      availableOperations: [],
-    }),
-    subscribe: () => ({ dispose() {} }),
-    issue: async request => ({
-      ...request,
-      contract: "cordisx.channel-manager-target-result/v1",
-      schemaVersion: 1,
-      revision: 0,
-      status: "unavailable",
-      code: "SERVICE_UNAVAILABLE",
-    }),
-    execute: async request => ({
-      ...request,
-      contract: "cordisx.channel-manager-result/v2",
-      schemaVersion: 2,
-      revision: 0,
-      status: "unavailable",
-      code: "SERVICE_UNAVAILABLE",
-    }),
-    queryLogs: async () => {
-      throw new Error("SERVICE_UNAVAILABLE");
-    },
-    exportLogs: async () => {
-      throw new Error("SERVICE_UNAVAILABLE");
+    mode: advertised || invalidConfigurationFacade ? "snapshot-only" : "standard",
+    manager: {
+      snapshot: () => ({
+        contract: "cordisx.channel-runtime-snapshot/v3",
+        schemaVersion: 3,
+        profileId: "unavailable",
+        hostGeneration: "unavailable",
+        revision: 0,
+        observedAt: new Date(0).toISOString(),
+        accounts: [],
+        bindings: [],
+        pendingAuthorizations: [],
+        availableOperations: [],
+      }),
+      subscribe: () => ({ dispose() {} }),
+      issue: async request => ({
+        ...request,
+        contract: "cordisx.channel-manager-target-result/v1",
+        schemaVersion: 1,
+        revision: 0,
+        status: "unavailable",
+        code: "SERVICE_UNAVAILABLE",
+      }),
+      execute: async request => ({
+        ...request,
+        contract: "cordisx.channel-manager-result/v2",
+        schemaVersion: 2,
+        revision: 0,
+        status: "unavailable",
+        code: "SERVICE_UNAVAILABLE",
+      }),
+      queryLogs: async () => {
+        throw new Error("SERVICE_UNAVAILABLE");
+      },
+      exportLogs: async () => {
+        throw new Error("SERVICE_UNAVAILABLE");
+      },
     },
   };
 }
@@ -352,9 +413,21 @@ export function apply(ctx: Context): void {
     },
   });
 
-  const manager = managerFor(ctx);
-  const settingsAvailable = typeof (manager as Partial<ChannelManagerV11>).mountSettingsForm === "function";
-  const modelsAvailable = typeof (manager as Partial<ChannelManagerV12>).mountBindingModelForm === "function";
+  const selected = managerFor(ctx);
+  const manager = selected.manager;
+  const snapshotOnly = selected.mode === "snapshot-only";
+  const configurationOnly = selected.mode === "configuration-only";
+  const connectionControl = configurationOnly && configurationConnectionControl(manager);
+  const connectionReconnect = connectionControl && configurationConnectionReconnect(manager);
+  const restricted = selected.mode !== "standard";
+  const credentialCreate = configurationOnly && configurationConnectionCreate(manager);
+  const creationAvailable = !restricted || credentialCreate;
+  const creationPlatforms = (snapshot: Parameters<typeof availablePlatforms>[0]) =>
+    availablePlatforms(snapshot).filter(platform => !configurationOnly || platform !== "simulator");
+  const settingsAvailable = !restricted
+    && typeof (manager as Partial<ChannelManagerV11>).mountSettingsForm === "function";
+  const modelsAvailable = !restricted
+    && typeof (manager as Partial<ChannelManagerV12>).mountBindingModelForm === "function";
   const supportedSettingsTabs = channelSettingsTabs.filter(tab => tab.id !== "preferences-models" || modelsAvailable);
   // beta.63's SDK predates this additive public v6 service. Use the Protocol
   // declaration only when the actual Host advertises the matching version.
@@ -373,18 +446,29 @@ export function apply(ctx: Context): void {
   const conversations = new ChannelConversationCatalog();
   ctx.effect(() => () => conversations.dispose(), "channel: conversation display lifetime");
   const mount = defineReactPage<Messages>(
-    createChannelPage(manager, ctx.notifications, conversations, summaryAvailable),
+    createChannelPage(manager, ctx.notifications, conversations, summaryAvailable, snapshotOnly, configurationOnly),
   );
   for (const tuple of pages.filter(([id]) => id !== "settings")) {
+    if (
+      restricted && tuple[0] !== "runtime" && !(configurationOnly && tuple[0] === "configuration")
+      && !(credentialCreate && tuple[0] === "create")
+    ) continue;
     if (
       tuple[0].startsWith("preferences-") && !settingsAvailable || tuple[0] === "preferences-models" && !modelsAvailable
     ) continue;
     ctx.pages.register<Messages>(
-      page(tuple),
-      tuple[0] === "configuration" ? withConfigurationHeader(ctx, manager, mount) : mount,
+      page(tuple, false, false, false, restricted, connectionControl, connectionReconnect),
+      tuple[0] === "configuration" && (!restricted || connectionControl)
+        ? withConfigurationHeader(ctx, manager, mount, !restricted || connectionReconnect)
+        : mount,
     );
   }
   for (const definition of routes.map(route)) {
+    if (
+      restricted && definition.id !== "settings" && definition.id !== "runtime"
+      && !(configurationOnly && definition.id === "configuration")
+      && !(credentialCreate && definition.id === "create")
+    ) continue;
     if (
       definition.id.startsWith("preferences-") && !settingsAvailable
       || definition.id === "preferences-models" && !modelsAvailable
@@ -397,49 +481,55 @@ export function apply(ctx: Context): void {
     });
     if (destination) ctx.effect(() => () => destination.dispose(), "channel: unified settings destination");
   }
-  ctx.commands.register({ id: "open-create", title: message("route.create") }, async ({ signal }) => {
-    if (signal.aborted || availablePlatforms(manager.snapshot()).length === 0) return;
-    await ctx.routes.navigate({ id: "create" });
-  });
-
-  ctx.commands.register({
-    id: "configure-policy",
-    title: message(settingsAvailable ? "settings.title" : "policy.configure"),
-  }, async ({ signal }) => {
-    const policyManager = manager as Partial<ChannelManagerV7>;
-    if (settingsAvailable) {
-      if (!signal.aborted) await ctx.routes.navigate({ id: "preferences-defaults" });
-      return;
-    }
-    if (typeof policyManager.mountConversationReplyPolicyForm === "function") {
-      if (!signal.aborted) await ctx.routes.navigate({ id: "policy" });
-      return;
-    }
-    const configure = typeof policyManager.configureConversationReplyPolicy === "function"
-      ? policyManager.configureConversationReplyPolicy
-      : policyManager.configureConversationPolicy;
-    if (signal.aborted || typeof configure !== "function") return;
-    try {
-      const result = await configure.call(policyManager, signal);
-      if (result.status === "cancelled" || signal.aborted) return;
-      ctx.notifications.show({
-        kind: result.status === "applied" ? "channel.operation.saved" : "channel.operation.failed",
-        type: result.status === "applied" ? "success" : "error",
-        message: copy(
-          document.documentElement.lang,
-          result.status === "applied" ? "operation.saved" : "operation.failed",
-        ),
-      });
-    } catch {
-      if (!signal.aborted) {
-        ctx.notifications.show({
-          kind: "channel.operation.failed",
-          type: "error",
-          message: copy(document.documentElement.lang, "operation.failed"),
-        });
+  if (creationAvailable) {
+    ctx.commands.register({ id: "open-create", title: message("route.create") }, async ({ signal }) => {
+      if (signal.aborted || creationPlatforms(manager.snapshot()).length === 0) {
+        return;
       }
-    }
-  });
+      await ctx.routes.navigate({ id: "create" });
+    });
+  }
+
+  if (!restricted) {
+    ctx.commands.register({
+      id: "configure-policy",
+      title: message(settingsAvailable ? "settings.title" : "policy.configure"),
+    }, async ({ signal }) => {
+      const policyManager = manager as Partial<ChannelManagerV7>;
+      if (settingsAvailable) {
+        if (!signal.aborted) await ctx.routes.navigate({ id: "preferences-defaults" });
+        return;
+      }
+      if (typeof policyManager.mountConversationReplyPolicyForm === "function") {
+        if (!signal.aborted) await ctx.routes.navigate({ id: "policy" });
+        return;
+      }
+      const configure = typeof policyManager.configureConversationReplyPolicy === "function"
+        ? policyManager.configureConversationReplyPolicy
+        : policyManager.configureConversationPolicy;
+      if (signal.aborted || typeof configure !== "function") return;
+      try {
+        const result = await configure.call(policyManager, signal);
+        if (result.status === "cancelled" || signal.aborted) return;
+        ctx.notifications.show({
+          kind: result.status === "applied" ? "channel.operation.saved" : "channel.operation.failed",
+          type: result.status === "applied" ? "success" : "error",
+          message: copy(
+            document.documentElement.lang,
+            result.status === "applied" ? "operation.saved" : "operation.failed",
+          ),
+        });
+      } catch {
+        if (!signal.aborted) {
+          ctx.notifications.show({
+            kind: "channel.operation.failed",
+            type: "error",
+            message: copy(document.documentElement.lang, "operation.failed"),
+          });
+        }
+      }
+    });
+  }
 
   ctx.effect(() => {
     let disposeProjection: Disposable<void | Promise<void>> = () => {};
@@ -450,7 +540,7 @@ export function apply(ctx: Context): void {
         summaryAvailable && "snapshotWithIdentity" in manager && typeof manager.snapshotWithIdentity === "function"
           ? (manager as ChannelManagerV7).snapshotWithIdentity()
           : manager.snapshot();
-      const canCreate = availablePlatforms(snapshot).length > 0;
+      const canCreate = creationAvailable && creationPlatforms(snapshot).length > 0;
       if (listCanCreate !== canCreate) {
         void disposeListPage();
         disposeListPage = ctx.pages.register<Messages>(
@@ -461,6 +551,10 @@ export function apply(ctx: Context): void {
               || typeof (manager as Partial<ChannelManagerV6>).configureConversationReplyPolicy === "function"
               || typeof (manager as Partial<ChannelManagerV4>).configureConversationPolicy === "function",
             settingsAvailable,
+            restricted,
+            false,
+            false,
+            credentialCreate,
           ),
           mount,
         );
@@ -476,22 +570,27 @@ export function apply(ctx: Context): void {
         id: "root",
         route: { id: "settings" },
         header: { title: { kind: "route" } },
-      }, {
-        $schema: CORDISX_MANAGER_CONTENT_NAVIGATION_SCHEMA_V1,
-        schemaVersion: 1,
-        id: "create",
-        route: { id: "create" },
-        parentRoute: { id: "settings" },
-        header: { title: { kind: "route" } },
       }];
-      declarations.push({
-        $schema: CORDISX_MANAGER_CONTENT_NAVIGATION_SCHEMA_V1,
-        schemaVersion: 1,
-        id: "policy",
-        route: { id: "policy" },
-        parentRoute: { id: "settings" },
-        header: { title: { kind: "route" } },
-      });
+      if (creationAvailable) {
+        declarations.push({
+          $schema: CORDISX_MANAGER_CONTENT_NAVIGATION_SCHEMA_V1,
+          schemaVersion: 1,
+          id: "create",
+          route: { id: "create" },
+          parentRoute: { id: "settings" },
+          header: { title: { kind: "route" } },
+        });
+      }
+      if (!restricted) {
+        declarations.push({
+          $schema: CORDISX_MANAGER_CONTENT_NAVIGATION_SCHEMA_V1,
+          schemaVersion: 1,
+          id: "policy",
+          route: { id: "policy" },
+          parentRoute: { id: "settings" },
+          header: { title: { kind: "route" } },
+        });
+      }
       if (settingsAvailable) {
         const settingsTabs = supportedSettingsTabs.map(tab => ({
           id: tab.id,
@@ -517,8 +616,15 @@ export function apply(ctx: Context): void {
           ? platformTitle(account.adapterKind)
           : message("record.title", { name: account.displayName }),
       }));
+      const pendingResolution = configurationOnly && configurationPendingTenantResolution(manager);
       for (const account of snapshot.accounts) {
-        const tabs = (["configuration", "runtime", "logs", "sessions"] as const).map(id => ({
+        const visibleTabs = snapshotOnly || configurationOnly && !pendingResolution
+            && account.lastErrorCode === "TENANT_IDENTIFICATION_PENDING"
+          ? ["runtime"] as const
+          : configurationOnly
+          ? ["configuration", "runtime"] as const
+          : ["configuration", "runtime", "logs", "sessions"] as const;
+        const tabs = visibleTabs.map(id => ({
           id,
           route: { id, params: { connectionToken: account.connectionToken } },
         }));
@@ -542,7 +648,7 @@ export function apply(ctx: Context): void {
           });
         }
       }
-      for (const conversation of conversations.all()) {
+      for (const conversation of restricted ? [] : conversations.all()) {
         const account = snapshot.accounts.find(account => account.connectionToken === conversation.connectionToken);
         if (!account) continue;
         recordTitles.push({

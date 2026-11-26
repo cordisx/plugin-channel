@@ -14,6 +14,7 @@ import { copy, type CopyKey } from "./locales.js";
 import { stateLabel } from "./model.js";
 import { platformLabel } from "./presentation.js";
 import { channelPlatformIcon } from "./platform-icons.js";
+import { configurationPendingTenantResolution, snapshotOnlyPresentation } from "./presentation-capabilities.js";
 
 const COLLECTION_ID = "connections";
 const STATES = ["ready", "starting", "retrying", "disabled", "stopped", "unavailable"] as const;
@@ -75,7 +76,13 @@ export class ChannelCollectionSource implements ManagerCollectionSourceV1 {
   private readonly lifetime = new AbortController();
   private refreshTimer: ReturnType<typeof setTimeout> | undefined;
 
-  constructor(private readonly manager: ChannelManagerV2, private readonly locale: string, identity = false) {
+  constructor(
+    private readonly manager: ChannelManagerV2,
+    private readonly locale: string,
+    identity = false,
+    private readonly snapshotOnly = snapshotOnlyPresentation(manager),
+    private readonly configurationOnly = false,
+  ) {
     this.subscription = manager.subscribe(() => {
       if (this.disposed) return;
       this.revision += 1;
@@ -138,6 +145,7 @@ export class ChannelCollectionSource implements ManagerCollectionSourceV1 {
     // Return the complete selected view. Approximate plugin-side search can discard Unicode matches.
     const accounts = all.filter(account => query.view === "all" || account.connectionState === query.view);
     if (accounts.length > 1000) throw new Error("Channel collection exceeds its snapshot bound.");
+    const pendingResolution = this.configurationOnly && configurationPendingTenantResolution(this.manager);
     const items = accounts.map((account, order): ManagerCollectionItem => {
       const platform = platformLabel(this.locale, account.adapterKind);
       const name = publicName(account.displayName ?? account.accountName ?? platform);
@@ -154,7 +162,13 @@ export class ChannelCollectionSource implements ManagerCollectionSourceV1 {
           fallback: `${platform} · ${state}`,
         },
         leadingVisual: { kind: "semantic-icon", icon: "host:layers" },
-        route: { id: "configuration", params: { connectionToken: account.connectionToken } },
+        route: {
+          id: this.snapshotOnly || this.configurationOnly && !pendingResolution
+              && account.lastErrorCode === "TENANT_IDENTIFICATION_PENDING"
+            ? "runtime"
+            : "configuration",
+          params: { connectionToken: account.connectionToken },
+        },
         order,
         disabled: { value: false },
         actions: [],
@@ -195,9 +209,11 @@ export function registerChannelCollection(
   registry: ManagerCollectionRegistryV1 & Partial<Pick<ManagerCollectionRegistryV2, "registerV2">>,
   manager: ChannelManagerV2,
   locale: string,
+  snapshotOnly = snapshotOnlyPresentation(manager),
+  configurationOnly = false,
 ) {
   const identity = typeof registry.registerV2 === "function";
-  const source = new ChannelCollectionSource(manager, locale, identity);
+  const source = new ChannelCollectionSource(manager, locale, identity, snapshotOnly, configurationOnly);
   try {
     const handle = registry.registerV2 === undefined
       ? registry.register(channelCollectionRegistration(locale), source)
